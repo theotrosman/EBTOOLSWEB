@@ -3,175 +3,157 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="EBTOOLS - Herramientas y equipamiento industrial. Importadores y distribuidores de herramientas neumáticas, agrícolas, gastronómicas y más. Consultas por WhatsApp.">
-  <meta name="keywords" content="herramientas industriales, herramientas neumáticas, herramientas agrícolas, equipamiento gastronomía, Argentina">
-  <meta property="og:title" content="EBTOOLS - Herramientas Industriales">
-  <meta property="og:description" content="Importadores y distribuidores de herramientas y equipamiento industrial en Argentina.">
+  <meta name="description" content="EBTOOLS — Importadores y distribuidores de herramientas y equipamiento industrial en Argentina. Neumáticas, agrícolas, gastronómicas y más.">
+  <meta property="og:title" content="EBTOOLS — Herramientas Industriales">
+  <meta property="og:description" content="Importadores directos de herramientas profesionales para industria, agro y gastronomía.">
   <meta property="og:type" content="website">
   <title>EBTOOLS — Herramientas Industriales</title>
+  <link rel="icon" href="assets/icon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
-  <!-- Favicon inline SVG -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='20' y='35' width='35' height='35' transform='rotate(45 37.5 52.5)' fill='%23F47B20'/><rect x='45' y='10' width='28' height='28' transform='rotate(45 59 24)' fill='%23FFC107'/><rect x='50' y='50' width='28' height='28' transform='rotate(45 64 64)' fill='%23D4610A'/><rect x='20' y='58' width='20' height='20' transform='rotate(45 30 68)' fill='%23FFC107'/></svg>">
 </head>
 <body>
 
 <!-- ===== NAVBAR ===== -->
 <nav class="navbar" id="navbar">
   <a class="nav-logo" href="#inicio" aria-label="EBTOOLS inicio">
-    <!-- Logo: inline SVG matching the brand mark + text -->
-    <svg width="130" height="36" viewBox="0 0 130 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Diamond mark -->
-      <rect x="3" y="10" width="14" height="14" rx="1.5" transform="rotate(45 10 17)" fill="#F47B20"/>
-      <rect x="15" y="2" width="10" height="10" rx="1" transform="rotate(45 20 7)" fill="#FFC107"/>
-      <rect x="18" y="16" width="10" height="10" rx="1" transform="rotate(45 23 21)" fill="#D4610A"/>
-      <rect x="4" y="21" width="8" height="8" rx="0.8" transform="rotate(45 8 25)" fill="#FFC107"/>
-      <!-- EBTOOLS text -->
-      <text x="38" y="21" font-family="Inter, -apple-system, sans-serif" font-weight="800" font-size="15" fill="#0A0A0A" letter-spacing="-0.5">EBTOOLS</text>
-      <text x="39" y="31" font-family="Inter, -apple-system, sans-serif" font-weight="500" font-size="7.5" fill="#777" letter-spacing="2.5">HERRAMIENTAS</text>
-    </svg>
+    <img src="assets/logo.png" alt="EBTOOLS Herramientas" height="32">
   </a>
-
-  <ul class="nav-menu" id="nav-menu" role="navigation">
+  <ul class="nav-menu" id="nav-menu">
     <li><a href="#inicio">Inicio</a></li>
     <li><a href="#categorias">Categorías</a></li>
     <li><a href="#productos">Productos</a></li>
     <li><a href="#nosotros">Nosotros</a></li>
     <li><a href="#contacto">Contacto</a></li>
     <li>
-      <a href="https://wa.me/5491171349389?text=Hola!%20Quiero%20consultar%20sobre%20sus%20productos." target="_blank" class="btn-whatsapp-nav" rel="noopener">
+      <a href="https://wa.me/5491171349389?text=Hola!%20Quiero%20consultar%20sobre%20sus%20productos." target="_blank" rel="noopener" class="btn-wa-nav">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         WhatsApp
       </a>
     </li>
   </ul>
-
-  <button class="nav-toggle" id="nav-toggle" aria-label="Abrir menú">
+  <button class="nav-toggle" id="nav-toggle" aria-label="Menú">
     <span></span><span></span><span></span>
   </button>
 </nav>
 
+<!-- ===== TICKER ===== -->
+<div class="ticker-wrap" style="margin-top:68px">
+  <div class="ticker-track">
+    <span class="ticker-item">Herramientas Neumáticas <span>✦</span></span>
+    <span class="ticker-item">Equipamiento Agrícola <span>✦</span></span>
+    <span class="ticker-item">Gastronomía Industrial <span>✦</span></span>
+    <span class="ticker-item">Compresores y Repuestos <span>✦</span></span>
+    <span class="ticker-item">Construcción <span>✦</span></span>
+    <span class="ticker-item">Importadores Directos · Argentina <span>✦</span></span>
+    <span class="ticker-item">Sopletes y Pinturas <span>✦</span></span>
+    <span class="ticker-item">Filtros y Acoples <span>✦</span></span>
+    <span class="ticker-item">MercadoLíder Oficial <span>✦</span></span>
+  </div>
+</div>
+
 <!-- ===== HERO ===== -->
 <section class="hero" id="inicio">
-  <div class="hero-bg-grid"></div>
-
   <div class="hero-left">
-    <div class="hero-badge">
-      <span class="hero-badge-dot"></span>
-      Importadores directos · Argentina
-    </div>
+    <div class="hero-eyebrow">Importadores directos · Argentina</div>
 
     <h1 class="hero-title">
       Las herramientas que<br>
-      <span>impulsan</span> la industria.
+      <span class="accent">impulsan</span><br>
+      la industria.
     </h1>
 
-    <p class="hero-subtitle">
-      Somos importadores y distribuidores de equipos y herramientas para la optimización de procesos industriales, agrícolas y gastronómicos.
+    <p class="hero-sub">
+      Distribuimos equipos y herramientas para construcción, agro y gastronomía. Acceleramos procesos, reducimos costos de mano de obra.
     </p>
 
-    <div class="hero-dynamic">
-      <span class="hero-dynamic-prefix">Especialistas en</span>
-      <span class="hero-dynamic-text">
-        <span class="text-item">Herramientas neumáticas</span>
-        <span class="text-item">Equipamiento agrícola</span>
-        <span class="text-item">Gastronomía industrial</span>
-        <span class="text-item">Instrumentos de precisión</span>
-        <span class="text-item">Soluciones para talleres</span>
-        <span class="text-item">Tecnología para producción</span>
-      </span>
-    </div>
-
-    <div class="hero-buttons">
+    <div class="hero-btns">
       <a href="#productos" class="btn-primary">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg>
-        Ver catálogo
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg>
+        Ver catálogo completo
       </a>
-      <a href="https://wa.me/5491171349389?text=Hola!%20Me%20gustar%C3%ADa%20saber%20m%C3%A1s%20sobre%20sus%20productos." target="_blank" rel="noopener" class="btn-secondary">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      <a href="https://wa.me/5491171349389?text=Hola!%20Quiero%20consultar%20sobre%20sus%20herramientas." target="_blank" rel="noopener" class="btn-outline">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         Consultar ahora
       </a>
     </div>
   </div>
 
+  <!-- Hero right: rotating product -->
   <div class="hero-right">
-    <div class="hero-product-wrapper">
-      <div class="hero-float hero-float--products">
-        <div class="hero-float-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M12 12h.01"/></svg>
+    <div class="hero-stage">
+      <!-- Chip A -->
+      <div class="hero-chip hero-chip--a">
+        <div class="chip-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6c0 1.1.9 2 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
         </div>
         <div>
-          <div class="hero-float-num">+50</div>
-          <div class="hero-float-label">Productos disponibles</div>
+          <div class="chip-num">+53</div>
+          <div class="chip-label">Productos disponibles</div>
         </div>
       </div>
 
-      <div class="hero-product-scene">
-        <div class="hero-product-card">
-          <div class="blueprint-corner blueprint-corner--tl"></div>
-          <div class="blueprint-corner blueprint-corner--tr"></div>
-          <div class="blueprint-corner blueprint-corner--bl"></div>
-          <div class="blueprint-corner blueprint-corner--br"></div>
-          <img
-            src="https://ebtools.com.ar/wp-content/uploads/2021/02/2-1-1024x1024.jpg"
-            alt="Llave de Impacto Neumática EBTOOLS"
-            loading="eager"
-          >
-          <div class="hero-product-glow"></div>
-          <div class="hero-product-label">Llave de Impacto Neumática</div>
+      <!-- Product card -->
+      <div class="hero-product-card">
+        <div class="hero-mark hero-mark--tl"></div>
+        <div class="hero-mark hero-mark--br"></div>
+        <img class="hero-product-img"
+          src="https://ebtools.com.ar/wp-content/uploads/2021/02/2-1-1024x1024.jpg"
+          alt="Llave de Impacto Neumática"
+          loading="eager">
+        <div class="hero-product-label">
+          <span class="hero-product-label-name">Llave de Impacto Neumática</span>
+          <span class="hero-product-label-cat">Neumáticas</span>
         </div>
       </div>
 
-      <div class="hero-float hero-float--categories">
-        <div class="hero-float-icon">
+      <!-- Progress dots -->
+      <div class="hero-dots">
+        <button class="hero-dot active" aria-label="Producto 1"></button>
+        <button class="hero-dot" aria-label="Producto 2"></button>
+        <button class="hero-dot" aria-label="Producto 3"></button>
+        <button class="hero-dot" aria-label="Producto 4"></button>
+        <button class="hero-dot" aria-label="Producto 5"></button>
+        <button class="hero-dot" aria-label="Producto 6"></button>
+      </div>
+
+      <!-- Chip B -->
+      <div class="hero-chip hero-chip--b">
+        <div class="chip-icon">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         </div>
         <div>
-          <div class="hero-float-num">8</div>
-          <div class="hero-float-label">Categorías de productos</div>
+          <div class="chip-num">8</div>
+          <div class="chip-label">Categorías industriales</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== STATS BAR ===== -->
+<!-- ===== STATS ===== -->
 <div class="stats-bar">
   <div class="stat-item">
-    <div>
-      <div class="stat-num" data-counter="10000" data-suffix="+">0+</div>
-      <div class="stat-text">Productos vendidos</div>
-    </div>
+    <div class="stat-num" data-count="10000" data-suffix="+">0+</div>
+    <div class="stat-label">Productos vendidos en MercadoLibre</div>
   </div>
-  <div class="stat-item-divider"></div>
   <div class="stat-item">
-    <div>
-      <div class="stat-num" data-counter="53" data-suffix="">0</div>
-      <div class="stat-text">Productos en catálogo</div>
-    </div>
+    <div class="stat-num" data-count="53">0</div>
+    <div class="stat-label">SKUs activos en catálogo</div>
   </div>
-  <div class="stat-item-divider"></div>
   <div class="stat-item">
-    <div>
-      <div class="stat-num" data-counter="8" data-suffix="">0</div>
-      <div class="stat-text">Categorías industriales</div>
-    </div>
+    <div class="stat-num" data-count="8">0</div>
+    <div class="stat-label">Categorías industriales</div>
   </div>
-  <div class="stat-item-divider"></div>
   <div class="stat-item">
-    <div>
-      <div class="stat-num">MeLi</div>
-      <div class="stat-text">Vendedor líder oficial</div>
-    </div>
+    <div class="stat-num">MeLi</div>
+    <div class="stat-label">Vendedor líder oficial</div>
   </div>
-  <div class="stat-item-divider"></div>
   <div class="stat-item">
-    <div>
-      <div class="stat-num" data-counter="3" data-suffix=" sectores">0</div>
-      <div class="stat-text">Industria · Agro · Gastronomía</div>
-    </div>
+    <div class="stat-num" data-count="3">0</div>
+    <div class="stat-label">Sectores: industria · agro · gastronomía</div>
   </div>
 </div>
 
@@ -180,36 +162,34 @@
   <div class="categories-header">
     <div>
       <div class="section-tag">Categorías</div>
-      <h2 class="section-title">Todo lo que necesita<br>tu negocio</h2>
-      <p class="section-subtitle">Desde herramientas neumáticas hasta equipos gastronómicos. Encontrá el producto ideal para cada aplicación.</p>
+      <h2 class="section-title">Todo lo que necesita<br>tu proceso</h2>
+      <p class="section-sub">Herramientas seleccionadas para cada sector, importadas directamente sin intermediarios.</p>
     </div>
-    <a href="#productos" class="btn-secondary" style="white-space:nowrap">Ver todos los productos →</a>
+    <a href="#productos" class="btn-outline" style="white-space:nowrap; align-self:flex-end">Ver catálogo →</a>
   </div>
-  <div class="categories-grid" id="categories-grid">
-    <!-- Rendered by JS -->
-  </div>
+  <div class="categories-grid" id="categories-grid"></div>
 </section>
 
 <!-- ===== PRODUCTS ===== -->
 <section class="products-section" id="productos">
   <div class="products-header">
-    <div>
-      <div class="section-tag">Catálogo</div>
-      <h2 class="section-title">Nuestros productos</h2>
-    </div>
-    <div class="products-filter" id="products-filter">
-      <!-- Rendered by JS -->
+    <div class="section-tag">Catálogo</div>
+    <h2 class="section-title">Nuestros productos</h2>
+    <div class="products-controls">
+      <!-- Search -->
+      <div class="search-wrap">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="search-input" class="search-input" placeholder="Buscar productos..." autocomplete="off" spellcheck="false">
+      </div>
+      <!-- Filter pills -->
+      <div class="filter-pills" id="filter-pills"></div>
     </div>
   </div>
 
-  <div class="products-grid" id="products-grid">
-    <!-- Rendered by JS -->
-  </div>
+  <div class="products-grid" id="products-grid"></div>
 
   <div class="products-footer">
-    <button id="load-more-btn" class="btn-secondary" onclick="showAll=true; renderProducts();" style="display:none">
-      Ver más productos
-    </button>
+    <button id="load-more-btn" class="btn-outline" onclick="showAll=true;renderProducts()" style="display:none">Ver más</button>
   </div>
 </section>
 
@@ -217,60 +197,57 @@
 <section class="about-section" id="nosotros">
   <div class="about-left">
     <div class="section-tag" style="color:rgba(244,123,32,0.9)">Nosotros</div>
-    <h2 class="section-title">Importadores directos.<br>Calidad garantizada.</h2>
-    <p class="section-subtitle">
-      Somos importadores y distribuidores especializados en equipos y herramientas para la optimización de procesos industriales. Nuestro objetivo es acelerar las tareas y reducir los costos de mano de obra en los sectores de construcción, agricultura y gastronomía.
-    </p>
+    <h2 class="section-title">Importamos directamente.<br>Distribuimos con precisión.</h2>
+    <p class="section-sub">Somos importadores especializados en equipos para la optimización de procesos en construcción, agricultura y gastronomía. Reducimos costos de mano de obra con herramientas que realmente funcionan.</p>
 
-    <div class="about-features">
-      <div class="about-feature reveal">
-        <div class="about-feature-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
+    <div class="about-list">
+      <div class="about-list-item reveal">
+        <span class="about-list-num">01</span>
         <div>
-          <div class="about-feature-title">Calidad garantizada</div>
-          <div class="about-feature-text">Importamos directamente seleccionando los mejores productos del mercado internacional.</div>
+          <div class="about-list-title">Importación directa sin intermediarios</div>
+          <div class="about-list-text">Compramos directamente a fabricantes, asegurando calidad y precios competitivos en cada producto del catálogo.</div>
         </div>
       </div>
-      <div class="about-feature reveal" data-delay="80">
-        <div class="about-feature-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        </div>
+      <div class="about-list-item reveal" data-delay="60">
+        <span class="about-list-num">02</span>
         <div>
-          <div class="about-feature-title">Atención rápida</div>
-          <div class="about-feature-text">Respondemos consultas por WhatsApp al instante y asesoramos sobre el producto ideal para cada necesidad.</div>
+          <div class="about-list-title">Asesoramiento técnico real</div>
+          <div class="about-list-text">Conocemos cada herramienta que vendemos. Te ayudamos a elegir la opción correcta para tu aplicación específica.</div>
         </div>
       </div>
-      <div class="about-feature reveal" data-delay="160">
-        <div class="about-feature-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        </div>
+      <div class="about-list-item reveal" data-delay="120">
+        <span class="about-list-num">03</span>
         <div>
-          <div class="about-feature-title">Entrega en todo el país</div>
-          <div class="about-feature-text">Enviamos a todo el territorio argentino con los principales servicios de logística.</div>
+          <div class="about-list-title">Envíos a todo el país</div>
+          <div class="about-list-text">Despacho rápido desde Buenos Aires. Entrega en 24–72h según zona, con seguimiento en tiempo real.</div>
+        </div>
+      </div>
+      <div class="about-list-item reveal" data-delay="180">
+        <span class="about-list-num">04</span>
+        <div>
+          <div class="about-list-title">Vendedor MercadoLíder oficial</div>
+          <div class="about-list-text">Más de 10.000 ventas concretadas con calificación MercadoLíder. Historial verificable en nuestra tienda.</div>
         </div>
       </div>
     </div>
   </div>
 
   <div class="about-right">
-    <div class="about-grid">
-      <div class="about-stat-card">
-        <div class="about-stat-num" data-counter="10000" data-suffix="+">0+</div>
-        <div class="about-stat-label">Productos vendidos en MercadoLibre</div>
-      </div>
-      <div class="about-stat-card">
-        <div class="about-stat-num" data-counter="53" data-suffix="">0</div>
-        <div class="about-stat-label">SKUs activos en catálogo</div>
-      </div>
-      <div class="about-stat-card">
-        <div class="about-stat-num" data-counter="3" data-suffix="">0</div>
-        <div class="about-stat-label">Sectores industriales cubiertos</div>
-      </div>
-      <div class="about-stat-card">
-        <div class="about-stat-num">★ MeLi</div>
-        <div class="about-stat-label">MercadoLíder en MercadoLibre</div>
-      </div>
+    <div class="about-stat">
+      <div class="about-stat-num" data-count="10000" data-suffix="+">0+</div>
+      <div class="about-stat-label">Ventas concretadas en MercadoLibre</div>
+    </div>
+    <div class="about-stat">
+      <div class="about-stat-num" data-count="53">0</div>
+      <div class="about-stat-label">Productos únicos en catálogo activo</div>
+    </div>
+    <div class="about-stat">
+      <div class="about-stat-num" data-count="8">0</div>
+      <div class="about-stat-label">Categorías industriales cubiertas</div>
+    </div>
+    <div class="about-stat">
+      <div class="about-stat-num">★</div>
+      <div class="about-stat-label">Calificación MercadoLíder en Argentina</div>
     </div>
   </div>
 </section>
@@ -278,73 +255,68 @@
 <!-- ===== CONTACT ===== -->
 <section class="contact-section" id="contacto">
   <div class="contact-inner">
-    <div class="section-tag">Contacto</div>
-    <h2 class="section-title">¿Necesitás asesoramiento?</h2>
-    <p class="section-subtitle">Consultanos por WhatsApp o por cualquiera de nuestros canales. Te respondemos al instante.</p>
-
-    <div class="contact-cards">
-      <a href="https://wa.me/5491171349389?text=Hola!%20Me%20gustar%C3%ADa%20consultar%20sobre%20sus%20productos." target="_blank" rel="noopener" class="contact-card">
-        <div class="contact-card-icon wa-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#25D366" width="22" height="22"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        </div>
-        <div>
-          <div class="contact-card-label">WhatsApp</div>
-          <div class="contact-card-value">+54 9 11 7134-9389</div>
-        </div>
-      </a>
-
-      <a href="https://www.instagram.com/Ebtools" target="_blank" rel="noopener" class="contact-card">
-        <div class="contact-card-icon ig-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#E1306C" stroke-width="2" width="22" height="22"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg>
-        </div>
-        <div>
-          <div class="contact-card-label">Instagram</div>
-          <div class="contact-card-value">@Ebtools</div>
-        </div>
-      </a>
-
-      <a href="mailto:ml.elbahiense@gmail.com" class="contact-card">
-        <div class="contact-card-icon em-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#F47B20" stroke-width="2" width="22" height="22"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
-        </div>
-        <div>
-          <div class="contact-card-label">Email</div>
-          <div class="contact-card-value">ml.elbahiense@gmail.com</div>
-        </div>
-      </a>
-
-      <a href="https://www.mercadolibre.com.ar/tienda/ebtools" target="_blank" rel="noopener" class="contact-card">
-        <div class="contact-card-icon ml-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#3483FA" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-        </div>
-        <div>
-          <div class="contact-card-label">MercadoLibre</div>
-          <div class="contact-card-value">Tienda oficial</div>
-        </div>
+    <div>
+      <div class="section-tag">Contacto</div>
+      <div class="contact-cta-text">¿Necesitás<br>asesoramiento?</div>
+      <p class="section-sub" style="margin-bottom:0">Respondemos consultas al instante. Escribinos por WhatsApp y te asesoramos sobre el producto ideal para tu aplicación.</p>
+      <a href="https://wa.me/5491171349389?text=Hola%20EBTOOLS!%20Quiero%20consultar%20sobre%20sus%20productos%20y%20precios." target="_blank" rel="noopener" class="btn-wa-big">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Escribir por WhatsApp
       </a>
     </div>
 
-    <a href="https://wa.me/5491171349389?text=Hola!%20Quiero%20consultar%20sobre%20sus%20herramientas%20y%20productos." target="_blank" rel="noopener" class="btn-whatsapp-big">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Consultar por WhatsApp ahora
-    </a>
+    <div>
+      <div class="contact-links">
+        <a href="https://wa.me/5491171349389" target="_blank" rel="noopener" class="contact-link">
+          <div class="contact-link-icon" style="background:rgba(37,211,102,0.12)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </div>
+          <div>
+            <div class="contact-link-label">WhatsApp</div>
+            <div class="contact-link-val">+54 9 11 7134-9389</div>
+          </div>
+        </a>
+
+        <a href="https://www.instagram.com/Ebtools" target="_blank" rel="noopener" class="contact-link">
+          <div class="contact-link-icon" style="background:rgba(225,48,108,0.1)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="#E1306C" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg>
+          </div>
+          <div>
+            <div class="contact-link-label">Instagram</div>
+            <div class="contact-link-val">@Ebtools</div>
+          </div>
+        </a>
+
+        <a href="mailto:ml.elbahiense@gmail.com" class="contact-link">
+          <div class="contact-link-icon" style="background:rgba(244,123,32,0.1)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="#F47B20" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+          </div>
+          <div>
+            <div class="contact-link-label">Email</div>
+            <div class="contact-link-val">ml.elbahiense@gmail.com</div>
+          </div>
+        </a>
+
+        <a href="https://www.mercadolibre.com.ar/tienda/ebtools" target="_blank" rel="noopener" class="contact-link">
+          <div class="contact-link-icon" style="background:rgba(52,131,250,0.1)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3483FA" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+          </div>
+          <div>
+            <div class="contact-link-label">MercadoLibre</div>
+            <div class="contact-link-val">Tienda oficial EBTOOLS</div>
+          </div>
+        </a>
+      </div>
+    </div>
   </div>
 </section>
 
 <!-- ===== FOOTER ===== -->
 <footer>
-  <div class="footer-inner">
+  <div class="footer-top">
     <div class="footer-logo">
-      <svg width="110" height="30" viewBox="0 0 130 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="10" width="14" height="14" rx="1.5" transform="rotate(45 10 17)" fill="#F47B20"/>
-        <rect x="15" y="2" width="10" height="10" rx="1" transform="rotate(45 20 7)" fill="#FFC107"/>
-        <rect x="18" y="16" width="10" height="10" rx="1" transform="rotate(45 23 21)" fill="#D4610A"/>
-        <rect x="4" y="21" width="8" height="8" rx="0.8" transform="rotate(45 8 25)" fill="#FFC107"/>
-        <text x="38" y="21" font-family="Inter, sans-serif" font-weight="800" font-size="15" fill="white" letter-spacing="-0.5">EBTOOLS</text>
-        <text x="39" y="31" font-family="Inter, sans-serif" font-weight="500" font-size="7.5" fill="rgba(255,255,255,0.5)" letter-spacing="2.5">HERRAMIENTAS</text>
-      </svg>
+      <img src="assets/logo.png" alt="EBTOOLS">
     </div>
-
     <ul class="footer-links">
       <li><a href="#inicio">Inicio</a></li>
       <li><a href="#categorias">Categorías</a></li>
@@ -352,30 +324,54 @@
       <li><a href="#nosotros">Nosotros</a></li>
       <li><a href="#contacto">Contacto</a></li>
     </ul>
-
     <div class="footer-social">
       <a href="https://wa.me/5491171349389" target="_blank" rel="noopener" aria-label="WhatsApp">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
       </a>
       <a href="https://www.instagram.com/Ebtools" target="_blank" rel="noopener" aria-label="Instagram">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
       </a>
     </div>
   </div>
-
   <div class="footer-bottom">
-    <span>© 2025 EBTOOLS Herramientas. Todos los derechos reservados.</span>
-    <span>Importadores y distribuidores · Argentina</span>
+    <span>© 2025 EBTOOLS Herramientas. Importadores y distribuidores · Argentina.</span>
+    <span>Hecho con precisión industrial.</span>
   </div>
 </footer>
 
-<!-- ===== WhatsApp Float ===== -->
-<a href="https://wa.me/5491171349389?text=Hola!%20Quiero%20consultar%20sobre%20sus%20herramientas." target="_blank" rel="noopener" class="wa-float" aria-label="Contactar por WhatsApp">
+<!-- WhatsApp float -->
+<a href="https://wa.me/5491171349389?text=Hola%20EBTOOLS!%20Quiero%20consultar%20sobre%20sus%20herramientas." target="_blank" rel="noopener" class="wa-float" aria-label="WhatsApp">
+  <span class="wa-float-pulse"></span>
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 </a>
 
-<!-- ===== SCRIPTS ===== -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js" integrity="sha512-aNMyYYxdIxIaot0Y1/PLuEu3eipGCmsEUBrUq+7aVyPGMFH8z0eTP0tkqAvv34fzN6z+201d3T8HPb1svWSKg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-img-side">
+      <button class="modal-close" onclick="closeModal()" aria-label="Cerrar">✕</button>
+      <img id="modal-img" src="" alt="">
+    </div>
+    <div class="modal-info-side">
+      <div class="modal-tag" id="modal-tag"></div>
+      <div class="modal-name" id="modal-name"></div>
+      <div class="modal-desc" id="modal-desc"></div>
+      <div class="modal-actions">
+        <a id="modal-wa-btn" href="#" target="_blank" rel="noopener" class="modal-btn-wa">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Consultar precio por WhatsApp
+        </a>
+        <a id="modal-page-btn" href="#" class="modal-btn-page">Ver página completa del producto →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GSAP CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"></script>
+<script src="js/products-data.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
