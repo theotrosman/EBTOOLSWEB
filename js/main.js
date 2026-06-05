@@ -247,7 +247,7 @@ function renderProducts() {
     grid.innerHTML = toShow.map(p => `
     <div class="product-card" data-id="${p.id}" onclick="openModal(${p.id})">
       <div class="product-img-wrap">
-        <img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23f5f5f5%22 width=%22200%22 height=%22200%22/><text x=%2250%%22 y=%2254%%22 text-anchor=%22middle%22 fill=%22%23ccc%22 font-size=%2248%22>⚙</text></svg>'">
+        <img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.opacity='0'">
         <span class="product-cat-tag">${getCatLabel(p.cat)}</span>
       </div>
       <div class="product-body">
