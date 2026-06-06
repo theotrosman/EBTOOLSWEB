@@ -262,6 +262,20 @@ function renderProducts() {
   const filtered = getFiltered();
   const toShow   = showAll ? filtered : filtered.slice(0, PAGE_SIZE);
 
+  // Update result count label
+  const countEl = document.getElementById('products-result-count');
+  if (countEl) {
+    if (searchQuery) {
+      countEl.textContent = filtered.length === 0
+        ? ''
+        : `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''} para "${searchQuery}"`;
+    } else if (currentCat !== 'all') {
+      countEl.textContent = `${filtered.length} producto${filtered.length !== 1 ? 's' : ''} en ${getCatLabel(currentCat)}`;
+    } else {
+      countEl.textContent = `${filtered.length} productos`;
+    }
+  }
+
   if (toShow.length === 0) {
     grid.innerHTML = `<div class="no-results">Sin resultados para "<strong>${searchQuery || currentCat}</strong>". Intentá otra búsqueda.</div>`;
   } else {
@@ -312,7 +326,7 @@ function buildFilterPills() {
   if (!wrap) return;
   const all = [{ key:'all', label:`Todos (${PRODUCTS.length})` }, ...CATEGORIES.map(c => ({
     key: c.key,
-    label: `${c.label} ${PRODUCTS.filter(p=>p.cat===c.key).length}`
+    label: `${c.label} (${PRODUCTS.filter(p=>p.cat===c.key).length})`
   }))];
   wrap.innerHTML = all.map(c =>
     `<button class="filter-pill ${c.key==='all'?'active':''}" data-cat="${c.key}" onclick="filterByCat('${c.key}')">${c.label}</button>`
@@ -372,28 +386,13 @@ function initModal() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalOpen) closeModal(); });
 }
 
-/* ─── ABOUT SECTION ─── */
-function initAboutSection() {
-  // Orange line draws in
-  gsap.from('.about-section .section-tag::before', {
-    scaleX: 0, transformOrigin: 'left',
-    duration: 0.6, ease: 'power3.out',
-    scrollTrigger: { trigger: '.about-section', start: 'top 80%', once: true }
-  });
-}
-
-/* ─── PRODUCT CARD HOVER (subtle GSAP) ─── */
-function initCardHovers() {
-  document.addEventListener('mouseover', e => {
-    const card = e.target.closest('.product-card');
-    if (!card) return;
-    gsap.to(card, { boxShadow: '0 8px 28px rgba(0,0,0,0.1)', duration: 0.2 });
-  });
-  document.addEventListener('mouseout', e => {
-    const card = e.target.closest('.product-card');
-    if (!card || card.contains(e.relatedTarget)) return;
-    gsap.to(card, { boxShadow: '0 0px 0px rgba(0,0,0,0)', duration: 0.3 });
-  });
+/* ─── SCROLL TO TOP ─── */
+function initScrollTop() {
+  const btn = document.getElementById('scroll-top');
+  if (!btn) return;
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('visible', window.scrollY > 500);
+  }, { passive: true });
 }
 
 /* ─── INIT ─── */
@@ -405,10 +404,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderProducts();
   initSearch();
   initModal();
-  initCardHovers();
+  initScrollTop();
   animateCounters();
   initScrollReveal();
-  initAboutSection();
 
   // Hero sequences (slight delay for fonts/images)
   gsap.delayedCall(0.1, () => {
