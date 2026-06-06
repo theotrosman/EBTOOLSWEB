@@ -156,6 +156,7 @@ function initScrollReveal() {
 
   // ── Pre-hide ──────────────────────────────────────────────────────────────
   gsap.set('.section-title',   { opacity: 0, y: 20 });
+  gsap.set('.why-card',        { opacity: 0, y: 20 });
   gsap.set('.cat-card',        { opacity: 0, y: 18 });
   gsap.set('.stat-item',       { opacity: 0, y: 12 });
   gsap.set('.about-stat',      { opacity: 0, y: 20 });
@@ -169,6 +170,15 @@ function initScrollReveal() {
       clearProps: 'all',
       scrollTrigger: { trigger: el, start: 'top 88%', once: true }
     });
+  });
+
+  // ── Why cards ────────────────────────────────────────────────────────────
+  ScrollTrigger.batch('.why-card', {
+    onEnter: batch => gsap.to(batch, {
+      opacity: 1, y: 0, stagger: 0.1, duration: 0.55,
+      ease: 'power2.out', clearProps: 'all'
+    }),
+    start: 'top 88%', once: true
   });
 
   // ── Category cards ───────────────────────────────────────────────────────
