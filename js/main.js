@@ -52,15 +52,38 @@ function initTicker() {
 }
 
 /* ─── HERO ENTRANCE ─── */
+const HERO_ELS = [
+  '.hero-eyebrow', '.hero-title', '.hero-sub',
+  '.hero-btns', '.hero-btns > *', '.hero-trust',
+  '.hero-product-card', '.hero-chip', '.hero-dots'
+];
+
+function forceHeroVisible() {
+  gsap.set(HERO_ELS, { clearProps: 'all' });
+}
+
 function heroEntrance() {
-  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-  tl.from('.hero-eyebrow',  { opacity: 0, x: -20, duration: 0.6 })
-    .from('.hero-title',    { opacity: 0, y: 32, duration: 0.7 }, '-=0.3')
-    .from('.hero-sub',      { opacity: 0, y: 20, duration: 0.6 }, '-=0.4')
-    .from('.hero-btns > *', { opacity: 0, y: 16, stagger: 0.1, duration: 0.5 }, '-=0.4')
+  const tl = gsap.timeline({
+    defaults: { ease: 'power3.out', clearProps: 'all' },
+    onComplete: forceHeroVisible   // belt-and-suspenders cleanup
+  });
+
+  tl.from('.hero-eyebrow',      { opacity: 0, x: -20, duration: 0.6 })
+    .from('.hero-title',        { opacity: 0, y: 32,  duration: 0.7 }, '-=0.3')
+    .from('.hero-sub',          { opacity: 0, y: 20,  duration: 0.6 }, '-=0.4')
+    .from('.hero-btns > *',     { opacity: 0, y: 16,  stagger: 0.1, duration: 0.5 }, '-=0.4')
     .from('.hero-product-card', { opacity: 0, scale: 0.9, y: 30, duration: 0.8, ease: 'back.out(1.4)' }, '-=0.7')
-    .from('.hero-chip',     { opacity: 0, scale: 0.85, stagger: 0.15, duration: 0.5, ease: 'back.out(1.5)' }, '-=0.5')
-    .from('.hero-dots',     { opacity: 0, duration: 0.4 }, '-=0.3');
+    .from('.hero-chip',         { opacity: 0, scale: 0.85, stagger: 0.15, duration: 0.5, ease: 'back.out(1.5)' }, '-=0.5')
+    .from('.hero-dots',         { opacity: 0, duration: 0.4 }, '-=0.3');
+
+  // If tab was hidden during entrance, jump to end and clear everything
+  document.addEventListener('visibilitychange', function onFocus() {
+    if (!document.hidden) {
+      tl.progress(1);          // snap to completed state
+      forceHeroVisible();      // remove all inline GSAP styles
+      document.removeEventListener('visibilitychange', onFocus);
+    }
+  });
 }
 
 /* ─── ACCENT WORD ROTATION ─── */
