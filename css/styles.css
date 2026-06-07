@@ -141,8 +141,8 @@ body { font-family: var(--font); background: var(--white); color: var(--black); 
 .btn-primary {
   display: inline-flex; align-items: center; gap: 8px;
   background: var(--orange); color: var(--white);
-  font-size: 0.9rem; font-weight: 700;
-  padding: 13px 26px; border-radius: 6px;
+  font-size: 1rem; font-weight: 700;
+  padding: 15px 32px; border-radius: 7px;
   text-decoration: none; border: none; cursor: pointer;
   transition: var(--t); font-family: var(--font);
   letter-spacing: -0.01em;
@@ -153,8 +153,8 @@ body { font-family: var(--font); background: var(--white); color: var(--black); 
 .btn-outline {
   display: inline-flex; align-items: center; gap: 8px;
   background: transparent; color: var(--black);
-  font-size: 0.9rem; font-weight: 600;
-  padding: 12px 26px; border-radius: 6px;
+  font-size: 1rem; font-weight: 600;
+  padding: 14px 32px; border-radius: 7px;
   text-decoration: none; border: 1.5px solid var(--gray-300); cursor: pointer;
   transition: var(--t); font-family: var(--font);
   letter-spacing: -0.01em;
@@ -821,7 +821,7 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   .hero-stage { width: 240px; height: 240px; }
   .hero-title { font-size: clamp(1.9rem, 8.5vw, 2.4rem); }
   .hero-sub { font-size: 0.92rem; }
-  .btn-primary, .btn-outline { padding: 12px 20px; font-size: 0.85rem; }
+  .btn-primary, .btn-outline { padding: 13px 22px; font-size: 0.9rem; }
 
   .stats-bar { grid-template-columns: repeat(2, 1fr); }
   .stat-num { font-size: 1.3rem; }
