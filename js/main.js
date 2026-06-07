@@ -72,11 +72,22 @@ function initAccentRotation() {
     accentIdx = (accentIdx + 1) % ACCENT_WORDS.length;
     gsap.timeline()
       .to(el, { opacity: 0, y: -12, duration: 0.25, ease: 'power2.in' })
-      .call(() => { el.textContent = ACCENT_WORDS[accentIdx]; })
-      .from(el, { opacity: 0, y: 12, duration: 0.35, ease: 'power2.out' });
+      .call(() => {
+        el.textContent = ACCENT_WORDS[accentIdx];
+        gsap.set(el, { y: 14 }); // pre-position for entrance
+      })
+      .to(el, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
   }
 
   setInterval(rotateAccent, 2600);
+
+  // When tab regains focus, ensure the accent word is always visible
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      gsap.killTweensOf(el);
+      gsap.set(el, { opacity: 1, y: 0, clearProps: 'all' });
+    }
+  });
 }
 
 /* ─── HERO PRODUCT ROTATION ─── */
