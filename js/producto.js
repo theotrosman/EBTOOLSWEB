@@ -74,24 +74,48 @@ function renderRelated(product) {
     </a>
   `).join('');
 
-  gsap.from('.related-card', {
-    opacity: 0, y: 20, stagger: 0.07, duration: 0.5, ease: 'power2.out',
+  gsap.set('.related-card', { opacity: 0, y: 20 });
+  gsap.to('.related-card', {
+    opacity: 1, y: 0, stagger: 0.07, duration: 0.5, ease: 'power2.out',
+    clearProps: 'all',
     scrollTrigger: { trigger: '#related-section', start: 'top 85%', once: true }
   });
 }
 
 function initAnimations() {
-  const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+  const HERO_ELS = [
+    '.product-hero-img img', '.product-hero-cat', '.product-hero-name',
+    '.product-hero-desc', '.product-hero-cta > *', '.breadcrumb'
+  ];
+
+  function forceProductVisible() {
+    gsap.set(HERO_ELS, { clearProps: 'all' });
+  }
+
+  const tl = gsap.timeline({
+    defaults: { ease: 'power2.out', clearProps: 'all' },
+    onComplete: forceProductVisible
+  });
   tl.from('.product-hero-img img',  { opacity: 0, scale: 0.94, duration: 0.7 })
     .from('.product-hero-cat',      { opacity: 0, x: -16, duration: 0.5 }, '-=0.4')
     .from('.product-hero-name',     { opacity: 0, y: 20, duration: 0.6 }, '-=0.3')
     .from('.product-hero-desc',     { opacity: 0, y: 16, duration: 0.5 }, '-=0.4')
     .from('.product-hero-cta > *',  { opacity: 0, y: 12, stagger: 0.1, duration: 0.4 }, '-=0.3');
 
-  gsap.from('.breadcrumb', { opacity: 0, y: -8, duration: 0.5, ease: 'power2.out' });
+  gsap.from('.breadcrumb', { opacity: 0, y: -8, duration: 0.5, ease: 'power2.out', clearProps: 'all' });
 
-  gsap.from('.section-title', {
-    opacity: 0, y: 20, duration: 0.6, ease: 'power2.out',
+  document.addEventListener('visibilitychange', function onFocus() {
+    if (!document.hidden) {
+      tl.progress(1);
+      forceProductVisible();
+      document.removeEventListener('visibilitychange', onFocus);
+    }
+  });
+
+  // Section title above related grid
+  gsap.set('.related-section .section-title', { opacity: 0, y: 20 });
+  gsap.to('.related-section .section-title', {
+    opacity: 1, y: 0, duration: 0.6, ease: 'power2.out', clearProps: 'all',
     scrollTrigger: { trigger: '.related-section', start: 'top 85%', once: true }
   });
 }
