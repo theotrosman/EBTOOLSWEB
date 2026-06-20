@@ -45,7 +45,9 @@ async function loadDataFromSupabase() {
     CATEGORIES = cats.data.map(c => ({ key: c.key, label: c.label, icon: c.icon || '' }));
     SUBCATEGORIES = subs.data.map(s => ({ key: s.key, cat: s.cat, label: s.label }));
     PRODUCTS = prods.data.map(p => ({
-      id: p.id, name: p.name, slug: p.slug, cat: p.cat, subcat: p.subcat || null,
+      id: p.id, name: p.name, slug: p.slug,
+      cats: Array.isArray(p.cats) ? p.cats : (p.cat ? [p.cat] : []),
+      subcats: Array.isArray(p.subcats) ? p.subcats : (p.subcat ? [p.subcat] : []),
       img: p.img, short: p.short || '', desc: p.descr || '',
     }));
     return true;

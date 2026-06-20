@@ -30,7 +30,7 @@ function renderProduct() {
   document.getElementById('meta-desc').content = product.desc.slice(0, 160);
 
   // Breadcrumb
-  document.getElementById('breadcrumb-cat').textContent  = getCatLabel(product.cat);
+  document.getElementById('breadcrumb-cat').textContent  = getCatLabel(primaryCat(product));
   document.getElementById('breadcrumb-name').textContent = product.name;
 
   // Hero content
@@ -38,7 +38,7 @@ function renderProduct() {
   img.src = product.img;
   img.alt = product.name;
 
-  document.getElementById('product-cat').textContent  = getCatLabel(product.cat);
+  document.getElementById('product-cat').textContent  = productCatLabels(product).join(' · ');
   document.getElementById('product-name').textContent = product.name;
   document.getElementById('product-desc').textContent = product.desc;
 
@@ -62,14 +62,14 @@ function renderRelated(product) {
     return;
   }
 
-  title.textContent = `Más herramientas de ${getCatLabel(product.cat)}`;
+  title.textContent = `Más herramientas de ${getCatLabel(primaryCat(product))}`;
 
   grid.innerHTML = related.map(p => `
     <a href="producto.html?id=${p.id}" class="related-card">
       <img src="${p.img}" alt="${p.name}" loading="lazy">
       <div class="related-card-body">
         <div class="related-card-name">${p.name}</div>
-        <div class="related-card-cat">${getCatLabel(p.cat)}</div>
+        <div class="related-card-cat">${getCatLabel(primaryCat(p))}</div>
       </div>
     </a>
   `).join('');

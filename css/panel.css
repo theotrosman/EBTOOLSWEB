@@ -70,6 +70,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
 .modal-form textarea{min-height:90px;resize:vertical}
 .check-row{display:flex;align-items:center;gap:8px}
 .check-row input{width:auto}
+.check-hint{font-size:.72rem;color:var(--g500);margin:-2px 0 4px}
+.check-group{display:flex;flex-wrap:wrap;gap:6px;max-height:170px;overflow-y:auto;border:1px solid var(--g300);border-radius:8px;padding:8px;background:var(--white)}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:600;color:var(--g700);background:var(--g100);border:1px solid var(--g200);border-radius:7px;padding:5px 9px;cursor:pointer;transition:var(--t);user-select:none}
+.chk:hover{border-color:var(--black)}
+.chk input{width:auto;margin:0;accent-color:var(--orange)}
+.chk:has(input:checked){background:#fff3e9;border-color:var(--orange);color:var(--black)}
+.tag.tag-sub{background:#eef3ff;border-color:#d4e0fb;color:#3a5ba8}
 .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
 .modal-msg{font-size:.8rem;color:#c0392b;text-align:right;margin-top:8px;min-height:1em}
 

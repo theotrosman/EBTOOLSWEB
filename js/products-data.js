@@ -130,6 +130,25 @@ function getSubcatsForCat(catKey) {
   return SUBCATEGORIES.filter(s => s.cat === catKey);
 }
 
+/* ── Multi-categoría / multi-subcategoría ──
+   Un producto puede pertenecer a varias categorías y subcategorías.
+   Estos helpers aceptan tanto el formato nuevo (arrays `cats`/`subcats`)
+   como el viejo (`cat`/`subcat` únicos), así el fallback bundleado y los
+   datos de Supabase conviven sin romper nada. */
+function productCats(p) {
+  if (Array.isArray(p.cats) && p.cats.length) return p.cats;
+  return p.cat ? [p.cat] : [];
+}
+function productSubcats(p) {
+  if (Array.isArray(p.subcats) && p.subcats.length) return p.subcats;
+  return p.subcat ? [p.subcat] : [];
+}
+function productHasCat(p, cat)    { return productCats(p).includes(cat); }
+function productHasSubcat(p, sub) { return productSubcats(p).includes(sub); }
+function primaryCat(p)            { return productCats(p)[0] || ''; }
+function productCatLabels(p)      { return productCats(p).map(getCatLabel); }
+function productSubcatLabels(p)   { return productSubcats(p).map(getSubcatLabel); }
+
 function waMsg(productName) {
   const msg = `Hola EBTOOLS! Me interesa el producto: *${productName}*. ¿Me podrían dar información y precio? Gracias!`;
   return `https://wa.me/${WA}?text=${encodeURIComponent(msg)}`;
@@ -140,5 +159,8 @@ function getProductById(id) {
 }
 
 function getRelated(product, limit = 4) {
-  return PRODUCTS.filter(p => p.cat === product.cat && p.id !== product.id).slice(0, limit);
+  const cats = productCats(product);
+  return PRODUCTS
+    .filter(p => p.id !== product.id && productCats(p).some(c => cats.includes(c)))
+    .slice(0, limit);
 }

@@ -9,6 +9,11 @@ const state = { cats: [], subcats: [], products: [], psearch: '' };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
 
+// Un producto puede tener varias categorías/subcategorías. Soporta el
+// formato nuevo (arrays cats/subcats) y el viejo (cat/subcat único).
+const pcats = p => Array.isArray(p.cats) && p.cats.length ? p.cats : (p.cat ? [p.cat] : []);
+const psubs = p => Array.isArray(p.subcats) && p.subcats.length ? p.subcats : (p.subcat ? [p.subcat] : []);
+
 function toast(msg, isErr = false) {
   const t = $('toast');
   t.textContent = msg;
@@ -81,7 +86,7 @@ const subLabel = k => state.subcats.find(s => s.key === k)?.label || (k || '—'
 function renderProducts() {
   const wrap = $('products-table');
   const q = state.psearch.toLowerCase();
-  const list = state.products.filter(p => !q || p.name.toLowerCase().includes(q) || catLabel(p.cat).toLowerCase().includes(q));
+  const list = state.products.filter(p => !q || p.name.toLowerCase().includes(q) || pcats(p).map(catLabel).join(' ').toLowerCase().includes(q));
   if (!list.length) { wrap.innerHTML = '<div class="empty">Sin productos.</div>'; return; }
   wrap.innerHTML = list.map(p => `
     <div class="row">
@@ -89,8 +94,8 @@ function renderProducts() {
       <div class="row-main">
         <div class="row-title">${esc(p.name)}</div>
         <div class="row-meta">
-          <span class="tag">${esc(catLabel(p.cat))}</span>
-          ${p.subcat ? `<span class="tag">${esc(subLabel(p.subcat))}</span>` : ''}
+          ${pcats(p).map(c => `<span class="tag">${esc(catLabel(c))}</span>`).join('')}
+          ${psubs(p).map(s => `<span class="tag tag-sub">${esc(subLabel(s))}</span>`).join('')}
           ${p.active ? '' : '<span class="tag off">Oculto</span>'}
         </div>
       </div>
@@ -106,7 +111,7 @@ function renderCats() {
   const wrap = $('cats-table');
   if (!state.cats.length) { wrap.innerHTML = '<div class="empty">Sin categorías.</div>'; return; }
   wrap.innerHTML = state.cats.map(c => {
-    const n = state.products.filter(p => p.cat === c.key).length;
+    const n = state.products.filter(p => pcats(p).includes(c.key)).length;
     return `
     <div class="row">
       <div class="row-main">
@@ -126,7 +131,7 @@ function renderSubcats() {
   const wrap = $('subcats-table');
   if (!state.subcats.length) { wrap.innerHTML = '<div class="empty">Sin subcategorías.</div>'; return; }
   wrap.innerHTML = state.subcats.map(s => {
-    const n = state.products.filter(p => p.subcat === s.key).length;
+    const n = state.products.filter(p => psubs(p).includes(s.key)).length;
     return `
     <div class="row">
       <div class="row-main">
@@ -162,35 +167,59 @@ function fieldSelect(name, label, options, val = '') {
   const opts = options.map(o => `<option value="${esc(o.value)}" ${o.value === val ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
   return `<label class="field"><span>${label}</span><select name="${name}">${opts}</select></label>`;
 }
+// Grupo de checkboxes (selección múltiple). `opts` = [{value,label,parent?}]
+function fieldChecks(name, label, opts, selected = [], hint = '') {
+  const set = new Set(selected);
+  const boxes = opts.map(o =>
+    `<label class="chk" ${o.parent ? `data-parent="${esc(o.parent)}"` : ''}>
+       <input type="checkbox" name="${name}" value="${esc(o.value)}" ${set.has(o.value) ? 'checked' : ''}>
+       <span>${esc(o.label)}</span>
+     </label>`).join('');
+  return `<div class="field"><span>${label}</span>
+    ${hint ? `<div class="check-hint">${hint}</div>` : ''}
+    <div class="check-group" data-group="${name}">${boxes}</div></div>`;
+}
 const formVal = name => $('modal-form').elements[name]?.value ?? '';
+const checkedVals = name => [...$('modal-form').querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
 
 /* ---------- PRODUCT CRUD ---------- */
 function catOptions() { return state.cats.map(c => ({ value: c.key, label: c.label })); }
-function subOptions(cat) {
-  return [{ value:'', label:'— Sin subcategoría —' }, ...state.subcats.filter(s => s.cat === cat).map(s => ({ value: s.key, label: s.label }))];
+// Subcategorías agrupadas por su categoría padre, para los checkboxes.
+function subCheckOptions() {
+  return state.subcats.map(s => ({
+    value: s.key,
+    label: `${catLabel(s.cat)} › ${s.label}`,
+    parent: s.cat,
+  }));
 }
 
 function productForm(p) {
-  const cat = p?.cat || state.cats[0]?.key || '';
+  const selCats = p ? pcats(p) : (state.cats[0] ? [state.cats[0].key] : []);
+  const selSubs = p ? psubs(p) : [];
   return `
     ${fieldText('name','Nombre', p?.name || '')}
     ${fieldText('slug','Slug (URL)', p?.slug || '')}
-    ${fieldSelect('cat','Categoría', catOptions(), cat)}
-    ${fieldSelect('subcat','Subcategoría', subOptions(cat), p?.subcat || '')}
+    ${fieldChecks('cats','Categorías', catOptions(), selCats, 'Podés elegir más de una.')}
+    ${fieldChecks('subcats','Subcategorías', subCheckOptions(), selSubs, 'Se muestran las de las categorías elegidas.')}
     ${fieldText('img','URL de imagen', p?.img || '')}
     ${fieldText('short','Descripción corta', p?.short || '')}
     ${fieldArea('descr','Descripción completa', p?.descr || '')}
     <label class="check-row"><input type="checkbox" name="active" ${(!p || p.active) ? 'checked' : ''}> <span>Visible en el sitio</span></label>`;
 }
 
-function bindCatChangeForSubcat() {
-  const catSel = $('modal-form').elements['cat'];
-  const subSel = $('modal-form').elements['subcat'];
-  if (!catSel || !subSel) return;
-  catSel.addEventListener('change', () => {
-    const opts = subOptions(catSel.value);
-    subSel.innerHTML = opts.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
+// Muestra solo las subcategorías cuyas categorías padre están tildadas.
+function syncSubcatVisibility() {
+  const checkedCats = new Set(checkedVals('cats'));
+  $('modal-form').querySelectorAll('.chk[data-parent]').forEach(lbl => {
+    const show = checkedCats.has(lbl.dataset.parent);
+    lbl.style.display = show ? '' : 'none';
+    if (!show) { const cb = lbl.querySelector('input'); if (cb) cb.checked = false; }
   });
+}
+function bindProductCatFilter() {
+  $('modal-form').querySelectorAll('input[name="cats"]').forEach(cb =>
+    cb.addEventListener('change', syncSubcatVisibility));
+  syncSubcatVisibility();
 }
 
 function newProduct() {
@@ -200,7 +229,7 @@ function newProduct() {
     const { error } = await sb.from('products').insert(payload);
     afterSave(error, 'Producto creado');
   });
-  bindCatChangeForSubcat();
+  bindProductCatFilter();
 }
 function editProduct(id) {
   const p = state.products.find(x => x.id === id);
@@ -210,16 +239,18 @@ function editProduct(id) {
     const { error } = await sb.from('products').update(payload).eq('id', id);
     afterSave(error, 'Producto actualizado');
   });
-  bindCatChangeForSubcat();
+  bindProductCatFilter();
 }
 function collectProduct() {
   const name = formVal('name').trim();
   if (!name) { $('modal-msg').textContent = 'El nombre es obligatorio.'; return null; }
+  const cats = checkedVals('cats');
+  if (!cats.length) { $('modal-msg').textContent = 'Elegí al menos una categoría.'; return null; }
+  const subcats = checkedVals('subcats');
   const slug = formVal('slug').trim() || name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   return {
     name, slug,
-    cat: formVal('cat'),
-    subcat: formVal('subcat') || null,
+    cats, subcats,
     img: formVal('img').trim(),
     short: formVal('short').trim(),
     descr: formVal('descr').trim(),
@@ -259,7 +290,7 @@ function editCat(key) {
   const k = $('modal-form').elements['key']; if (k) k.disabled = true;
 }
 async function delCat(key) {
-  const n = state.products.filter(p => p.cat === key).length;
+  const n = state.products.filter(p => pcats(p).includes(key)).length;
   if (n > 0) { alert(`No se puede borrar: tiene ${n} productos. Reasignalos primero.`); return; }
   if (!confirm('¿Borrar esta categoría?')) return;
   const { error } = await sb.from('categories').delete().eq('key', key);
@@ -291,8 +322,8 @@ function editSubcat(key) {
   const k = $('modal-form').elements['key']; if (k) k.disabled = true;
 }
 async function delSubcat(key) {
-  const n = state.products.filter(p => p.subcat === key).length;
-  if (n > 0 && !confirm(`Tiene ${n} productos asignados (quedarán sin subcategoría). ¿Continuar?`)) return;
+  const n = state.products.filter(p => psubs(p).includes(key)).length;
+  if (n > 0 && !confirm(`Tiene ${n} productos asignados (se les quitará esta subcategoría). ¿Continuar?`)) return;
   if (n === 0 && !confirm('¿Borrar esta subcategoría?')) return;
   const { error } = await sb.from('subcategories').delete().eq('key', key);
   afterSave(error, 'Subcategoría borrada');
