@@ -9,6 +9,26 @@ const state = { cats: [], subcats: [], products: [], psearch: '' };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
 
+// Genera una "clave" interna a partir del nombre (el empleado nunca la ve).
+const slugify = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+// Íconos listos para elegir al crear una categoría (el empleado solo toca uno).
+const PRESET_ICONS = [
+  { name: 'Caja / cajón',        svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>' },
+  { name: 'Herramienta / llave', svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6a2 2 0 1 0 3 3l6-6a4 4 0 0 0 5.4-5.4l-2.7 2.7-2.3-.6-.6-2.3 2.6-2.8z"/></svg>' },
+  { name: 'Engranaje',           svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' },
+  { name: 'Aire / neumática',    svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' },
+  { name: 'Pintura / gota',      svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>' },
+  { name: 'Camión / envíos',     svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' },
+  { name: 'Filtro / embudo',     svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>' },
+  { name: 'Paquete / repuestos', svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>' },
+  { name: 'Medalla / oficial',   svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>' },
+  { name: 'Capas / construcción',svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>' },
+  { name: 'Disco / amoladora',   svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>' },
+  { name: 'Escudo / garantía',   svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>' },
+];
+// Ícono por defecto si por algún motivo no se eligió ninguno.
+const DEFAULT_CAT_ICON = PRESET_ICONS[0].svg;
+
 // Un producto puede tener varias categorías/subcategorías. Soporta el
 // formato nuevo (arrays cats/subcats) y el viejo (cat/subcat único).
 const pcats = p => Array.isArray(p.cats) && p.cats.length ? p.cats : (p.cat ? [p.cat] : []);
@@ -117,9 +137,10 @@ function renderCats() {
     const n = state.products.filter(p => pcats(p).includes(c.key)).length;
     return `
     <div class="row">
+      <div class="row-icon">${c.icon || ''}</div>
       <div class="row-main">
         <div class="row-title">${esc(c.label)}</div>
-        <div class="row-meta"><span class="tag">${esc(c.key)}</span> ${n} productos</div>
+        <div class="row-meta">${n} producto${n === 1 ? '' : 's'}</div>
       </div>
       <div class="row-actions">
         <button class="icon-btn" onclick="editCat('${esc(c.key)}')">Editar</button>
@@ -139,7 +160,7 @@ function renderSubcats() {
     <div class="row">
       <div class="row-main">
         <div class="row-title">${esc(s.label)}</div>
-        <div class="row-meta"><span class="tag">${esc(catLabel(s.cat))}</span> ${n} productos</div>
+        <div class="row-meta"><span class="tag">${esc(catLabel(s.cat))}</span> ${n} producto${n === 1 ? '' : 's'}</div>
       </div>
       <div class="row-actions">
         <button class="icon-btn" onclick="editSubcat('${esc(s.key)}')">Editar</button>
@@ -200,8 +221,7 @@ function productForm(p) {
   const selCats = p ? pcats(p) : (state.cats[0] ? [state.cats[0].key] : []);
   const selSubs = p ? psubs(p) : [];
   return `
-    ${fieldText('name','Nombre', p?.name || '')}
-    ${fieldText('slug','Slug (URL)', p?.slug || '')}
+    ${fieldText('name','Nombre del producto', p?.name || '')}
     ${fieldChecks('cats','Categorías', catOptions(), selCats, 'Podés elegir más de una.')}
     ${fieldChecks('subcats','Subcategorías', subCheckOptions(), selSubs, 'Se muestran las de las categorías elegidas.')}
     ${imageField(p?.img || '')}
@@ -333,9 +353,8 @@ function collectProduct() {
   const cats = checkedVals('cats');
   if (!cats.length) { $('modal-msg').textContent = 'Elegí al menos una categoría.'; return null; }
   const subcats = checkedVals('subcats');
-  const slug = formVal('slug').trim() || name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   return {
-    name, slug,
+    name, slug: slugify(name),
     cats, subcats,
     img: formVal('img').trim(),
     short: formVal('short').trim(),
@@ -365,7 +384,7 @@ function importProducts() {
   ], null, 2);
   const catList = state.cats.map(c => c.key).join(', ') || '(creá categorías primero)';
   openModal('Importar productos',
-    `<div class="check-hint">Pegá un <b>array JSON</b>. Obligatorios: <b>name</b> y <b>cats</b>. Opcionales: <code>subcats, img, short, descr, slug, active</code>.</div>
+    `<div class="check-hint">Pegá un <b>array JSON</b>. Obligatorios: <b>name</b> y <b>cats</b>. Opcionales: <code>subcats, img, short, descr, active</code>.</div>
      <div class="check-hint">Categorías válidas: ${esc(catList)}</div>
      <label class="field"><span>Productos (JSON)</span>
        <textarea name="bulk" class="bulk" spellcheck="false">${esc(example)}</textarea>
@@ -411,28 +430,66 @@ async function doBulkImport() {
 
 /* ---------- CATEGORY CRUD ---------- */
 function catForm(c, isNew) {
+  const cur = c?.icon || (isNew ? PRESET_ICONS[0].svg : '');
+  const isCustom = !!cur && !PRESET_ICONS.some(ic => ic.svg === cur);
+  const choices = PRESET_ICONS.map(ic =>
+    `<button type="button" class="icon-choice${!isCustom && cur === ic.svg ? ' sel' : ''}" data-svg="${esc(ic.svg)}" title="${esc(ic.name)}">${ic.svg}</button>`
+  ).join('');
   return `
-    ${fieldText('key','Clave (key, sin espacios)', c?.key || '')}${isNew ? '' : '<div class="row-meta" style="margin-top:-6px">La clave no se puede cambiar.</div>'}
-    ${fieldText('label','Nombre visible', c?.label || '')}
-    ${fieldArea('icon','Ícono SVG (opcional)', c?.icon || '')}
-    ${fieldText('sort','Orden', c?.sort ?? state.cats.length + 1, 'number')}`;
+    ${fieldText('label','Nombre de la categoría', c?.label || '')}
+    <div class="field"><span>Ícono</span>
+      <div class="check-hint">Tocá uno para elegirlo.</div>
+      <div class="icon-picker">${choices}</div>
+      <input type="hidden" name="icon" value="${esc(cur)}">
+      <details class="adv"${isCustom ? ' open' : ''}>
+        <summary>Usar otro ícono (avanzado)</summary>
+        <textarea name="iconCustom" placeholder="Pegá acá el código SVG">${isCustom ? esc(cur) : ''}</textarea>
+      </details>
+    </div>`;
+}
+// Conecta los botones del selector de íconos y el campo SVG avanzado.
+function bindCatForm() {
+  const form = $('modal-form');
+  const hidden = form.elements['icon'];
+  const custom = form.elements['iconCustom'];
+  form.querySelectorAll('.icon-choice').forEach(btn => {
+    btn.addEventListener('click', () => {
+      form.querySelectorAll('.icon-choice').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      hidden.value = btn.dataset.svg;
+      if (custom) custom.value = '';
+    });
+  });
+  if (custom) custom.addEventListener('input', () => {
+    if (custom.value.trim()) {
+      form.querySelectorAll('.icon-choice').forEach(b => b.classList.remove('sel'));
+      hidden.value = custom.value.trim();
+    }
+  });
 }
 function newCat() {
   openModal('Nueva categoría', catForm(null, true), async () => {
-    const key = formVal('key').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
-    if (!key || !formVal('label').trim()) { $('modal-msg').textContent = 'Clave y nombre son obligatorios.'; return; }
-    const { error } = await sb.from('categories').insert({ key, label: formVal('label').trim(), icon: formVal('icon').trim(), sort: parseInt(formVal('sort'))||0 });
+    const label = formVal('label').trim();
+    if (!label) { $('modal-msg').textContent = 'Escribí el nombre de la categoría.'; return; }
+    const key = slugify(label);
+    if (!key) { $('modal-msg').textContent = 'Ese nombre no es válido, probá con otro.'; return; }
+    const icon = formVal('iconCustom').trim() || formVal('icon').trim() || DEFAULT_CAT_ICON;
+    const sort = Math.max(0, ...state.cats.map(c => c.sort || 0)) + 1;
+    const { error } = await sb.from('categories').insert({ key, label, icon, sort });
     afterSave(error, 'Categoría creada');
   });
-  setTimeout(() => { const k=$('modal-form').elements['key']; if(k) k.disabled=false; }, 0);
+  bindCatForm();
 }
 function editCat(key) {
   const c = state.cats.find(x => x.key === key);
   openModal('Editar categoría', catForm(c, false), async () => {
-    const { error } = await sb.from('categories').update({ label: formVal('label').trim(), icon: formVal('icon').trim(), sort: parseInt(formVal('sort'))||0 }).eq('key', key);
+    const label = formVal('label').trim();
+    if (!label) { $('modal-msg').textContent = 'Escribí el nombre de la categoría.'; return; }
+    const icon = formVal('iconCustom').trim() || formVal('icon').trim() || c.icon || DEFAULT_CAT_ICON;
+    const { error } = await sb.from('categories').update({ label, icon }).eq('key', key);
     afterSave(error, 'Categoría actualizada');
   });
-  const k = $('modal-form').elements['key']; if (k) k.disabled = true;
+  bindCatForm();
 }
 async function delCat(key) {
   const n = state.products.filter(p => pcats(p).includes(key)).length;
@@ -445,26 +502,30 @@ async function delCat(key) {
 /* ---------- SUBCATEGORY CRUD ---------- */
 function subcatForm(s, isNew) {
   return `
-    ${fieldText('key','Clave (key, sin espacios)', s?.key || '')}${isNew ? '' : '<div class="row-meta" style="margin-top:-6px">La clave no se puede cambiar.</div>'}
-    ${fieldSelect('cat','Categoría padre', catOptions(), s?.cat || state.cats[0]?.key || '')}
-    ${fieldText('label','Nombre visible', s?.label || '')}
-    ${fieldText('sort','Orden', s?.sort ?? state.subcats.length + 1, 'number')}`;
+    ${fieldSelect('cat','¿A qué categoría pertenece?', catOptions(), s?.cat || state.cats[0]?.key || '')}
+    ${fieldText('label','Nombre de la subcategoría', s?.label || '')}`;
 }
 function newSubcat() {
   openModal('Nueva subcategoría', subcatForm(null, true), async () => {
-    const key = formVal('key').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
-    if (!key || !formVal('label').trim()) { $('modal-msg').textContent = 'Clave y nombre son obligatorios.'; return; }
-    const { error } = await sb.from('subcategories').insert({ key, cat: formVal('cat'), label: formVal('label').trim(), sort: parseInt(formVal('sort'))||0 });
+    const label = formVal('label').trim();
+    if (!label) { $('modal-msg').textContent = 'Escribí el nombre de la subcategoría.'; return; }
+    const cat = formVal('cat');
+    if (!cat) { $('modal-msg').textContent = 'Elegí a qué categoría pertenece.'; return; }
+    const key = slugify(label);
+    if (!key) { $('modal-msg').textContent = 'Ese nombre no es válido, probá con otro.'; return; }
+    const sort = Math.max(0, ...state.subcats.map(s => s.sort || 0)) + 1;
+    const { error } = await sb.from('subcategories').insert({ key, cat, label, sort });
     afterSave(error, 'Subcategoría creada');
   });
 }
 function editSubcat(key) {
   const s = state.subcats.find(x => x.key === key);
   openModal('Editar subcategoría', subcatForm(s, false), async () => {
-    const { error } = await sb.from('subcategories').update({ cat: formVal('cat'), label: formVal('label').trim(), sort: parseInt(formVal('sort'))||0 }).eq('key', key);
+    const label = formVal('label').trim();
+    if (!label) { $('modal-msg').textContent = 'Escribí el nombre de la subcategoría.'; return; }
+    const { error } = await sb.from('subcategories').update({ cat: formVal('cat'), label }).eq('key', key);
     afterSave(error, 'Subcategoría actualizada');
   });
-  const k = $('modal-form').elements['key']; if (k) k.disabled = true;
 }
 async function delSubcat(key) {
   const n = state.products.filter(p => psubs(p).includes(key)).length;
@@ -476,7 +537,14 @@ async function delSubcat(key) {
 
 /* ---------- SAVE HELPER ---------- */
 async function afterSave(error, okMsg) {
-  if (error) { $('modal-msg').textContent = 'Error: ' + error.message; toast('Error al guardar', true); return; }
+  if (error) {
+    const friendly = error.code === '23505'
+      ? 'Ya existe una con ese nombre. Probá con otro.'
+      : 'Error: ' + error.message;
+    $('modal-msg').textContent = friendly;
+    toast('No se pudo guardar', true);
+    return;
+  }
   closeModal();
   toast(okMsg);
   await loadAll();

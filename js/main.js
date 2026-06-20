@@ -31,24 +31,23 @@ function initNavbar() {
 /* ─── TICKER MARQUEE (GSAP) ─── */
 function initTicker() {
   const track = document.querySelector('.ticker-track');
-  if (!track) return;
+  if (!track || track.dataset.marquee) return;
+  track.dataset.marquee = '1';
 
-  // Clone track so it loops seamlessly
-  const clone = track.cloneNode(true);
-  track.parentElement.appendChild(clone);
+  // Duplicamos los items DENTRO de la misma fila para que el loop sea continuo
+  // (clonar la fila como elemento aparte la apilaba debajo y descentraba el texto).
+  track.innerHTML += track.innerHTML;
 
-  const totalW = track.scrollWidth;
-  gsap.set([track, clone], { x: (i) => i === 0 ? 0 : totalW });
+  const run = () => {
+    gsap.killTweensOf(track);
+    const half = track.scrollWidth / 2; // ancho de una sola copia
+    gsap.set(track, { x: 0 });
+    gsap.to(track, { x: -half, duration: 28, ease: 'none', repeat: -1 });
+  };
 
-  gsap.to([track, clone], {
-    x: `-=${totalW}`,
-    duration: 28,
-    ease: 'none',
-    repeat: -1,
-    modifiers: {
-      x: gsap.utils.unitize(x => parseFloat(x) % totalW)
-    }
-  });
+  run();
+  // Recalculamos cuando termina de cargar la tipografía (cambia el ancho real).
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(run);
 }
 
 /* ─── HERO ENTRANCE ─── */

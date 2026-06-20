@@ -64,26 +64,6 @@ create policy "auth write categories"    on categories    for all to authenticat
 create policy "auth write subcategories" on subcategories for all to authenticated using (true) with check (true);
 create policy "auth write products"      on products      for all to authenticated using (true) with check (true);
 
--- ---------- STORAGE (imágenes de productos) ----------
--- Bucket público: las imágenes se leen sin login; subirlas/borrarlas requiere
--- estar autenticado (el admin del backoffice). Permite el drag & drop del panel.
-insert into storage.buckets (id, name, public)
-values ('product-images', 'product-images', true)
-on conflict (id) do nothing;
-
-drop policy if exists "product images public read" on storage.objects;
-drop policy if exists "product images auth insert" on storage.objects;
-drop policy if exists "product images auth update" on storage.objects;
-drop policy if exists "product images auth delete" on storage.objects;
-create policy "product images public read" on storage.objects
-  for select using (bucket_id = 'product-images');
-create policy "product images auth insert" on storage.objects
-  for insert to authenticated with check (bucket_id = 'product-images');
-create policy "product images auth update" on storage.objects
-  for update to authenticated using (bucket_id = 'product-images');
-create policy "product images auth delete" on storage.objects
-  for delete to authenticated using (bucket_id = 'product-images');
-
 -- ---------- DATOS INICIALES ----------
 insert into categories(key,label,icon,sort) values('construccion','Construcción','<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>',1);
 insert into categories(key,label,icon,sort) values('gastronomia','Gastronomía','<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>',2);
@@ -171,3 +151,37 @@ insert into products(id,name,slug,cats,subcats,img,short,descr,sort,active) valu
 
 -- Reset de la secuencia de id para que los nuevos productos sigan después del 53
 select setval(pg_get_serial_sequence('products','id'), (select max(id) from products));
+
+-- ============================================================
+-- STORAGE: bucket para las imágenes de productos
+-- (necesario para que el botón "subir imagen" del panel funcione)
+-- ============================================================
+
+-- Crea el bucket público "product-images" (si ya existe, no hace nada).
+insert into storage.buckets (id, name, public)
+values ('product-images', 'product-images', true)
+on conflict (id) do update set public = true;
+
+-- Cualquiera puede VER las imágenes (el sitio es público).
+drop policy if exists "product images public read" on storage.objects;
+create policy "product images public read"
+  on storage.objects for select
+  using ( bucket_id = 'product-images' );
+
+-- Solo usuarios logueados (el backoffice) pueden SUBIR imágenes.
+drop policy if exists "product images auth insert" on storage.objects;
+create policy "product images auth insert"
+  on storage.objects for insert to authenticated
+  with check ( bucket_id = 'product-images' );
+
+-- Solo usuarios logueados pueden REEMPLAZAR imágenes.
+drop policy if exists "product images auth update" on storage.objects;
+create policy "product images auth update"
+  on storage.objects for update to authenticated
+  using ( bucket_id = 'product-images' );
+
+-- Solo usuarios logueados pueden BORRAR imágenes.
+drop policy if exists "product images auth delete" on storage.objects;
+create policy "product images auth delete"
+  on storage.objects for delete to authenticated
+  using ( bucket_id = 'product-images' );

@@ -78,6 +78,24 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
 .chk:has(input:checked){background:#fff3e9;border-color:var(--orange);color:var(--black)}
 .tag.tag-sub{background:#eef3ff;border-color:#d4e0fb;color:#3a5ba8}
 
+/* ICONO EN FILA DE CATEGORÍA */
+.row-icon{width:46px;height:46px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--g100);border-radius:7px;color:var(--g700);padding:9px}
+.row-icon svg{width:100%;height:100%;display:block}
+.row-icon:empty{display:none}
+
+/* SELECTOR DE ÍCONOS (categorías) */
+.icon-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin-bottom:6px}
+.icon-choice{display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;border:1px solid var(--g300);border-radius:10px;background:#fff;color:var(--g700);padding:11px;transition:var(--t)}
+.icon-choice:hover{border-color:var(--black);color:var(--black)}
+.icon-choice.sel{border-color:var(--orange);background:#fff3e9;color:var(--orange)}
+.icon-choice svg{width:100%;height:100%;display:block}
+.field details.adv{margin-top:4px}
+.field details.adv summary{font-size:.74rem;color:var(--g500);cursor:pointer;font-weight:600;list-style:none}
+.field details.adv summary::-webkit-details-marker{display:none}
+.field details.adv summary::before{content:"+ ";color:var(--orange);font-weight:800}
+.field details.adv[open] summary::before{content:"\2013 "}
+.field details.adv textarea{margin-top:6px;min-height:70px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.74rem}
+
 /* PANEL HEAD ACTIONS */
 .panel-head-actions{display:flex;gap:8px;align-items:center}
 
