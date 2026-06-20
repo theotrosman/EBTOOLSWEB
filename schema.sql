@@ -3,6 +3,14 @@
 -- Crea tablas, políticas RLS y carga los datos iniciales (53 productos).
 -- Un producto puede tener varias categorías y subcategorías (columnas array).
 
+-- ---------- RESET ----------
+-- Se borran las tablas para poder re-ejecutar el script sin errores (p. ej. si
+-- existía una versión vieja con columnas singulares cat/subcat).
+-- OJO: esto borra productos/categorías cargados y vuelve a dejar el seed inicial.
+drop table if exists products      cascade;
+drop table if exists subcategories cascade;
+drop table if exists categories    cascade;
+
 -- ---------- TABLAS ----------
 create table if not exists categories (
   key   text primary key,
