@@ -14,6 +14,9 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt
 const pcats = p => Array.isArray(p.cats) && p.cats.length ? p.cats : (p.cat ? [p.cat] : []);
 const psubs = p => Array.isArray(p.subcats) && p.subcats.length ? p.subcats : (p.subcat ? [p.subcat] : []);
 
+// Bucket de Supabase Storage donde se suben las imágenes de productos.
+const IMG_BUCKET = 'product-images';
+
 function toast(msg, isErr = false) {
   const t = $('toast');
   t.textContent = msg;
@@ -197,14 +200,27 @@ function productForm(p) {
   const selCats = p ? pcats(p) : (state.cats[0] ? [state.cats[0].key] : []);
   const selSubs = p ? psubs(p) : [];
   return `
+    <div class="field"><span>Vista previa</span><div class="prod-preview" id="prod-preview"></div></div>
     ${fieldText('name','Nombre', p?.name || '')}
     ${fieldText('slug','Slug (URL)', p?.slug || '')}
     ${fieldChecks('cats','Categorías', catOptions(), selCats, 'Podés elegir más de una.')}
     ${fieldChecks('subcats','Subcategorías', subCheckOptions(), selSubs, 'Se muestran las de las categorías elegidas.')}
-    ${fieldText('img','URL de imagen', p?.img || '')}
+    ${imageField(p?.img || '')}
     ${fieldText('short','Descripción corta', p?.short || '')}
     ${fieldArea('descr','Descripción completa', p?.descr || '')}
     <label class="check-row"><input type="checkbox" name="active" ${(!p || p.active) ? 'checked' : ''}> <span>Visible en el sitio</span></label>`;
+}
+
+// Campo de imagen: zona para arrastrar/soltar (o clic) + URL manual de respaldo.
+function imageField(val) {
+  return `<div class="field"><span>Imagen</span>
+    <div class="check-hint">Arrastrá un archivo, hacé clic para elegirlo, o pegá una URL abajo.</div>
+    <div class="dropzone" id="img-drop" tabindex="0" role="button" aria-label="Subir imagen">
+      <div class="dz-inner"><span class="dz-icon">&#8682;</span><span class="dz-text">Soltá la imagen acá o hacé clic</span></div>
+    </div>
+    <input type="file" id="img-file" accept="image/*" hidden>
+    <input type="text" name="img" value="${esc(val)}" placeholder="https://... o subí un archivo" style="margin-top:8px">
+  </div>`;
 }
 
 // Muestra solo las subcategorías cuyas categorías padre están tildadas.
@@ -216,10 +232,80 @@ function syncSubcatVisibility() {
     if (!show) { const cb = lbl.querySelector('input'); if (cb) cb.checked = false; }
   });
 }
-function bindProductCatFilter() {
-  $('modal-form').querySelectorAll('input[name="cats"]').forEach(cb =>
-    cb.addEventListener('change', syncSubcatVisibility));
+function bindProductForm() {
+  const form = $('modal-form');
+  form.querySelectorAll('input[name="cats"]').forEach(cb =>
+    cb.addEventListener('change', () => { syncSubcatVisibility(); updatePreview(); }));
+  ['name', 'img', 'short'].forEach(n => {
+    const el = form.elements[n];
+    if (el) el.addEventListener('input', updatePreview);
+  });
+  bindDropzone();
   syncSubcatVisibility();
+  updatePreview();
+}
+
+// Vista previa en vivo de cómo se verá la tarjeta del producto en el sitio.
+function updatePreview() {
+  const el = $('prod-preview');
+  if (!el) return;
+  const name  = (formVal('name')  || '').trim() || 'Nombre del producto';
+  const img   = (formVal('img')   || '').trim();
+  const short = (formVal('short') || '').trim();
+  const cats  = checkedVals('cats').map(catLabel);
+  el.innerHTML = `
+    <div class="pp-card">
+      <div class="pp-media">
+        ${img ? `<img src="${esc(img)}" alt="" onerror="this.style.display='none'">` : '<span class="pp-noimg">Sin imagen</span>'}
+        <div class="pp-tags">${cats.map(c => `<span class="pp-tag">${esc(c)}</span>`).join('')}</div>
+      </div>
+      <div class="pp-body">
+        <div class="pp-name">${esc(name)}</div>
+        ${short ? `<div class="pp-short">${esc(short)}</div>` : ''}
+        <div class="pp-cta">Consultar por WhatsApp</div>
+      </div>
+    </div>`;
+}
+
+/* ---------- IMAGEN: DRAG & DROP + UPLOAD ---------- */
+function bindDropzone() {
+  const dz = $('img-drop'), file = $('img-file');
+  if (!dz || !file) return;
+  dz.addEventListener('click', () => file.click());
+  dz.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); file.click(); } });
+  file.addEventListener('change', () => { if (file.files[0]) handleImageFile(file.files[0]); });
+  ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave', 'dragend'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('drag')));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f) handleImageFile(f);
+  });
+}
+
+async function handleImageFile(file) {
+  if (!file.type.startsWith('image/')) { toast('El archivo tiene que ser una imagen.', true); return; }
+  if (file.size > 5 * 1024 * 1024) { toast('La imagen no puede superar los 5MB.', true); return; }
+  const dz = $('img-drop'), txt = dz?.querySelector('.dz-text');
+  dz?.classList.add('uploading');
+  if (txt) txt.textContent = 'Subiendo...';
+  const url = await uploadImage(file);
+  dz?.classList.remove('uploading');
+  if (txt) txt.textContent = 'Soltá la imagen acá o hacé clic';
+  if (url) {
+    $('modal-form').elements['img'].value = url;
+    updatePreview();
+    toast('Imagen subida');
+  }
+}
+
+async function uploadImage(file) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const id  = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2);
+  const path = `products/${id}.${ext}`;
+  const { error } = await sb.storage.from(IMG_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  if (error) { toast('Error al subir: ' + error.message, true); return null; }
+  return sb.storage.from(IMG_BUCKET).getPublicUrl(path).data?.publicUrl || null;
 }
 
 function newProduct() {
@@ -229,7 +315,7 @@ function newProduct() {
     const { error } = await sb.from('products').insert(payload);
     afterSave(error, 'Producto creado');
   });
-  bindProductCatFilter();
+  bindProductForm();
 }
 function editProduct(id) {
   const p = state.products.find(x => x.id === id);
@@ -239,7 +325,7 @@ function editProduct(id) {
     const { error } = await sb.from('products').update(payload).eq('id', id);
     afterSave(error, 'Producto actualizado');
   });
-  bindProductCatFilter();
+  bindProductForm();
 }
 function collectProduct() {
   const name = formVal('name').trim();
@@ -262,6 +348,65 @@ async function delProduct(id) {
   if (!confirm(`¿Borrar "${p?.name}"? Esta acción no se puede deshacer.`)) return;
   const { error } = await sb.from('products').delete().eq('id', id);
   afterSave(error, 'Producto borrado');
+}
+
+/* ---------- IMPORTACIÓN MASIVA ---------- */
+function importProducts() {
+  const example = JSON.stringify([
+    {
+      name: 'Producto de ejemplo',
+      cats: [state.cats[0]?.key || 'construccion'],
+      subcats: [],
+      img: 'https://...',
+      short: 'Descripción corta',
+      descr: 'Descripción completa',
+      active: true,
+    },
+  ], null, 2);
+  const catList = state.cats.map(c => c.key).join(', ') || '(creá categorías primero)';
+  openModal('Importar productos',
+    `<div class="check-hint">Pegá un <b>array JSON</b>. Obligatorios: <b>name</b> y <b>cats</b>. Opcionales: <code>subcats, img, short, descr, slug, active</code>.</div>
+     <div class="check-hint">Categorías válidas: ${esc(catList)}</div>
+     <label class="field"><span>Productos (JSON)</span>
+       <textarea name="bulk" class="bulk" spellcheck="false">${esc(example)}</textarea>
+     </label>`,
+    doBulkImport);
+}
+
+async function doBulkImport() {
+  const msg = $('modal-msg');
+  let arr;
+  try { arr = JSON.parse(formVal('bulk')); }
+  catch (e) { msg.textContent = 'JSON inválido: ' + e.message; return; }
+  if (!Array.isArray(arr) || !arr.length) { msg.textContent = 'Pegá un array con al menos un producto.'; return; }
+
+  const validCats = new Set(state.cats.map(c => c.key));
+  const validSubs = new Set(state.subcats.map(s => s.key));
+  const rows = [];
+  for (let i = 0; i < arr.length; i++) {
+    const p = arr[i] || {};
+    const n = `Fila ${i + 1}`;
+    if (!p.name || !String(p.name).trim()) { msg.textContent = `${n}: falta "name".`; return; }
+    const cats = Array.isArray(p.cats) ? p.cats : (p.cat ? [p.cat] : []);
+    if (!cats.length) { msg.textContent = `${n} (${p.name}): falta al menos una categoría en "cats".`; return; }
+    const badCat = cats.find(c => !validCats.has(c));
+    if (badCat) { msg.textContent = `${n} (${p.name}): categoría inexistente "${badCat}".`; return; }
+    const subs = Array.isArray(p.subcats) ? p.subcats : (p.subcat ? [p.subcat] : []);
+    const badSub = subs.find(s => !validSubs.has(s));
+    if (badSub) { msg.textContent = `${n} (${p.name}): subcategoría inexistente "${badSub}".`; return; }
+    rows.push({
+      name: String(p.name).trim(),
+      slug: String(p.slug || p.name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+      cats, subcats: subs,
+      img: p.img || '', short: p.short || '', descr: p.descr || '',
+      active: p.active !== false,
+    });
+  }
+  const { error } = await sb.from('products').insert(rows);
+  if (error) { msg.textContent = 'Error: ' + error.message; toast('Error al importar', true); return; }
+  closeModal();
+  toast(`${rows.length} producto(s) importado(s)`);
+  await loadAll();
 }
 
 /* ---------- CATEGORY CRUD ---------- */
@@ -352,6 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('product-search').addEventListener('input', e => { state.psearch = e.target.value; renderProducts(); });
   $('new-product-btn').addEventListener('click', newProduct);
+  $('import-products-btn').addEventListener('click', importProducts);
   $('new-cat-btn').addEventListener('click', newCat);
   $('new-subcat-btn').addEventListener('click', newSubcat);
 
