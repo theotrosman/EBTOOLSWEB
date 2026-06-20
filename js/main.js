@@ -250,13 +250,14 @@ function initScrollReveal() {
     start: 'top 90%', once: true
   });
 
-  // ── Contact links ────────────────────────────────────────────────────────
+  // ── Contact links — trigger permisivo para evitar que queden en opacity:0
+  // si las imágenes cambian la altura de la página después de calcular triggers.
   ScrollTrigger.batch('.contact-link', {
     onEnter: batch => gsap.to(batch, {
       opacity: 1, y: 0, stagger: 0.07, duration: 0.45,
       ease: 'power2.out', clearProps: 'all'
     }),
-    start: 'top 90%', once: true
+    start: 'top bottom', once: true
   });
 }
 
@@ -392,19 +393,19 @@ function buildFilterPills() {
 function buildSubcatPills() {
   const wrap = document.getElementById('subfilter-pills');
   if (!wrap) return;
-  if (currentCat === 'all') { wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
+  if (currentCat === 'all') { wrap.innerHTML = ''; wrap.classList.remove('visible'); return; }
 
   const subs = getSubcatsForCat(currentCat)
     .map(s => ({ ...s, count: PRODUCTS.filter(p => productHasCat(p, currentCat) && productHasSubcat(p, s.key)).length }))
     .filter(s => s.count > 0);
 
-  if (subs.length === 0) { wrap.innerHTML = ''; wrap.style.display = 'none'; return; }
+  if (subs.length === 0) { wrap.innerHTML = ''; wrap.classList.remove('visible'); return; }
 
   const total = PRODUCTS.filter(p => productHasCat(p, currentCat)).length;
   const pills = [{ key:'all', label:`Todas (${total})` }, ...subs.map(s => ({
     key: s.key, label: `${s.label} (${s.count})`
   }))];
-  wrap.style.display = 'flex';
+  wrap.classList.add('visible');
   wrap.innerHTML = pills.map(s =>
     `<button class="subfilter-pill ${s.key==='all'?'active':''}" data-subcat="${s.key}" onclick="filterBySubcat('${s.key}')">${s.label}</button>`
   ).join('');
@@ -414,10 +415,14 @@ function buildSubcatPills() {
 function initSearch() {
   const input = document.getElementById('search-input');
   if (!input) return;
+  let debounce;
   input.addEventListener('input', () => {
-    searchQuery = input.value.trim();
-    showAll     = true;
-    renderProducts();
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      searchQuery = input.value.trim();
+      showAll     = true;
+      renderProducts();
+    }, 150);
   });
 }
 
@@ -499,3 +504,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initHeroRotation();
   });
 });
+
+// Recalcular posiciones de ScrollTrigger después de que carguen las imágenes.
+// Evita que los triggers se calculen con una altura de página incorrecta (pre-imágenes),
+// lo que dejaba los datos de contacto en opacity:0 permanentemente.
+window.addEventListener('load', () => ScrollTrigger.refresh());
