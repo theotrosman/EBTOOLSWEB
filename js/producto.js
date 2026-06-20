@@ -120,8 +120,11 @@ function initAnimations() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initNavbar();
+  if (typeof loadDataFromSupabase === 'function') {
+    try { await loadDataFromSupabase(); } catch (e) { /* keep fallback */ }
+  }
   renderProduct();
   gsap.delayedCall(0.05, initAnimations);
 });

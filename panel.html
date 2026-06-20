@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Panel · EBTOOLS</title>
+  <link rel="icon" href="assets/icon.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-view" class="login-wrap">
+  <form id="login-form" class="login-card" autocomplete="off">
+    <img src="assets/logo.png" alt="EBTOOLS" class="login-logo">
+    <div class="login-title">Acceso restringido</div>
+    <div class="login-sub">Backoffice · solo personal autorizado</div>
+    <label class="field">
+      <span>Usuario</span>
+      <input type="text" id="login-user" required autocomplete="username" spellcheck="false">
+    </label>
+    <label class="field">
+      <span>Contraseña</span>
+      <input type="password" id="login-pass" required autocomplete="current-password">
+    </label>
+    <button type="submit" class="btn-primary" id="login-btn">Ingresar</button>
+    <div class="login-error" id="login-error"></div>
+  </form>
+</div>
+
+<!-- ===== ADMIN ===== -->
+<div id="admin-view" class="admin" style="display:none">
+  <header class="admin-top">
+    <img src="assets/logo.png" alt="EBTOOLS" class="admin-logo">
+    <span class="admin-badge">Backoffice</span>
+    <div class="admin-top-spacer"></div>
+    <span id="admin-user" class="admin-user"></span>
+    <button id="logout-btn" class="btn-ghost">Salir</button>
+  </header>
+
+  <nav class="admin-tabs">
+    <button class="tab active" data-tab="productos">Productos</button>
+    <button class="tab" data-tab="categorias">Categorías</button>
+    <button class="tab" data-tab="subcategorias">Subcategorías</button>
+  </nav>
+
+  <main class="admin-main">
+    <section id="tab-productos" class="tab-panel active">
+      <div class="panel-head">
+        <h2>Productos</h2>
+        <button class="btn-primary" id="new-product-btn">+ Nuevo producto</button>
+      </div>
+      <input type="text" id="product-search" class="admin-search" placeholder="Buscar producto...">
+      <div id="products-table" class="data-table"></div>
+    </section>
+
+    <section id="tab-categorias" class="tab-panel">
+      <div class="panel-head">
+        <h2>Categorías</h2>
+        <button class="btn-primary" id="new-cat-btn">+ Nueva categoría</button>
+      </div>
+      <div id="cats-table" class="data-table"></div>
+    </section>
+
+    <section id="tab-subcategorias" class="tab-panel">
+      <div class="panel-head">
+        <h2>Subcategorías</h2>
+        <button class="btn-primary" id="new-subcat-btn">+ Nueva subcategoría</button>
+      </div>
+      <div id="subcats-table" class="data-table"></div>
+    </section>
+  </main>
+</div>
+
+<!-- ===== MODAL FORM ===== -->
+<div id="modal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <button class="modal-x" id="modal-x" aria-label="Cerrar">×</button>
+    <h3 id="modal-title">Editar</h3>
+    <form id="modal-form" class="modal-form"></form>
+    <div class="modal-foot">
+      <button type="button" class="btn-ghost" id="modal-cancel">Cancelar</button>
+      <button type="button" class="btn-primary" id="modal-save">Guardar</button>
+    </div>
+    <div class="modal-msg" id="modal-msg"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/panel.js"></script>
+</body>
+</html>

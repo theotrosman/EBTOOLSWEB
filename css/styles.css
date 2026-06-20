@@ -39,7 +39,7 @@ body { font-family: var(--font); background: var(--white); color: var(--black); 
 .navbar.scrolled { border-bottom-color: var(--gray-300); }
 
 .nav-logo { display: flex; align-items: center; text-decoration: none; cursor: pointer; }
-.nav-logo img { height: 32px; width: auto; display: block; }
+.nav-logo img { height: 52px; width: auto; display: block; }
 
 .nav-menu { display: flex; align-items: center; gap: 4px; list-style: none; }
 .nav-menu a {
@@ -398,6 +398,18 @@ section { padding: 96px 5%; }
 .filter-pill:hover { border-color: var(--gray-700); color: var(--black); }
 .filter-pill.active { background: var(--black); border-color: var(--black); color: var(--white); }
 
+/* Subcategory pills (2do nivel) */
+.subfilter-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--gray-300); }
+.subfilter-pill {
+  padding: 5px 12px; border-radius: 100px;
+  border: 1px solid var(--gray-300); background: var(--white);
+  color: var(--gray-700); font-size: 0.72rem; font-weight: 600;
+  cursor: pointer; transition: var(--t); font-family: var(--font);
+  white-space: nowrap;
+}
+.subfilter-pill:hover { border-color: var(--orange); color: var(--orange); }
+.subfilter-pill.active { background: var(--orange); border-color: var(--orange); color: var(--white); }
+
 /* Product count */
 .products-count {
   font-size: 0.78rem; color: var(--gray-500);
@@ -515,6 +527,9 @@ section { padding: 96px 5%; }
 }
 .contact-link:hover { border-color: var(--orange); background: rgba(244,123,32,0.03); }
 .contact-link-icon { width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.contact-link-icon--ml { width: 52px; }
+.contact-link-icon--ml img { width: 44px; height: auto; display: block; }
+.contact-logo { height: 56px; width: auto; display: block; margin-bottom: 22px; }
 .contact-link-label { font-size: 0.7rem; color: var(--gray-500); font-weight: 500; }
 .contact-link-val { font-size: 0.85rem; font-weight: 700; color: var(--black); }
 
@@ -532,7 +547,7 @@ section { padding: 96px 5%; }
 /* ===================== FOOTER ===================== */
 footer { background: var(--gray-900); padding: 48px 5% 28px; }
 .footer-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding-bottom: 32px; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 24px; }
-.footer-logo img { height: 28px; opacity: 0.7; filter: brightness(0) invert(1); }
+.footer-logo img { height: 44px; opacity: 0.7; filter: brightness(0) invert(1); }
 .footer-links { display: flex; gap: 24px; list-style: none; }
 .footer-links a { color: rgba(255,255,255,0.4); text-decoration: none; font-size: 0.8rem; transition: color 0.2s; }
 .footer-links a:hover { color: var(--orange); }
