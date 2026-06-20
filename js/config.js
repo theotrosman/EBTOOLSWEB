@@ -4,8 +4,8 @@
    escritura solo para usuarios autenticados (el admin del backoffice).
    Por eso es correcto versionar estos valores en un sitio estático. */
 window.EBTOOLS_CONFIG = {
-  SUPABASE_URL: '__SUPABASE_URL__',
-  SUPABASE_ANON_KEY: '__SUPABASE_ANON_KEY__',
+  SUPABASE_URL: 'https://orrvqtrjvzksvgstkjle.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_HdN7h-7jwukoaRFIDI6vWg_Nhg7Q1Z5',
   // Mapeo usuario -> email para Supabase Auth (Auth requiere email).
   ADMIN_EMAIL: 'usuarioebtools@ebtools.com.ar',
   ADMIN_USERNAME: 'USUARIOEBTOOLS',
