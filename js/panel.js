@@ -200,7 +200,6 @@ function productForm(p) {
   const selCats = p ? pcats(p) : (state.cats[0] ? [state.cats[0].key] : []);
   const selSubs = p ? psubs(p) : [];
   return `
-    <div class="field"><span>Vista previa</span><div class="prod-preview" id="prod-preview"></div></div>
     ${fieldText('name','Nombre', p?.name || '')}
     ${fieldText('slug','Slug (URL)', p?.slug || '')}
     ${fieldChecks('cats','Categorías', catOptions(), selCats, 'Podés elegir más de una.')}
@@ -211,11 +210,13 @@ function productForm(p) {
     <label class="check-row"><input type="checkbox" name="active" ${(!p || p.active) ? 'checked' : ''}> <span>Visible en el sitio</span></label>`;
 }
 
-// Campo de imagen: zona para arrastrar/soltar (o clic) + URL manual de respaldo.
+// Campo de imagen: zona para arrastrar/soltar (o clic) que muestra la miniatura
+// de la imagen actual + URL manual de respaldo.
 function imageField(val) {
   return `<div class="field"><span>Imagen</span>
     <div class="check-hint">Arrastrá un archivo, hacé clic para elegirlo, o pegá una URL abajo.</div>
-    <div class="dropzone" id="img-drop" tabindex="0" role="button" aria-label="Subir imagen">
+    <div class="dropzone${val ? ' has-img' : ''}" id="img-drop" tabindex="0" role="button" aria-label="Subir imagen">
+      <img class="dz-thumb" alt="" ${val ? `src="${esc(val)}"` : 'style="display:none"'}>
       <div class="dz-inner"><span class="dz-icon">&#8682;</span><span class="dz-text">Soltá la imagen acá o hacé clic</span></div>
     </div>
     <input type="file" id="img-file" accept="image/*" hidden>
@@ -235,36 +236,29 @@ function syncSubcatVisibility() {
 function bindProductForm() {
   const form = $('modal-form');
   form.querySelectorAll('input[name="cats"]').forEach(cb =>
-    cb.addEventListener('change', () => { syncSubcatVisibility(); updatePreview(); }));
-  ['name', 'img', 'short'].forEach(n => {
-    const el = form.elements[n];
-    if (el) el.addEventListener('input', updatePreview);
-  });
+    cb.addEventListener('change', syncSubcatVisibility));
+  const imgEl = form.elements['img'];
+  if (imgEl) imgEl.addEventListener('input', refreshThumb);
   bindDropzone();
   syncSubcatVisibility();
-  updatePreview();
+  refreshThumb();
 }
 
-// Vista previa en vivo de cómo se verá la tarjeta del producto en el sitio.
-function updatePreview() {
-  const el = $('prod-preview');
-  if (!el) return;
-  const name  = (formVal('name')  || '').trim() || 'Nombre del producto';
-  const img   = (formVal('img')   || '').trim();
-  const short = (formVal('short') || '').trim();
-  const cats  = checkedVals('cats').map(catLabel);
-  el.innerHTML = `
-    <div class="pp-card">
-      <div class="pp-media">
-        ${img ? `<img src="${esc(img)}" alt="" onerror="this.style.display='none'">` : '<span class="pp-noimg">Sin imagen</span>'}
-        <div class="pp-tags">${cats.map(c => `<span class="pp-tag">${esc(c)}</span>`).join('')}</div>
-      </div>
-      <div class="pp-body">
-        <div class="pp-name">${esc(name)}</div>
-        ${short ? `<div class="pp-short">${esc(short)}</div>` : ''}
-        <div class="pp-cta">Consultar por WhatsApp</div>
-      </div>
-    </div>`;
+// Refresca la miniatura del dropzone según la URL actual del campo "img".
+function refreshThumb() {
+  const dz = $('img-drop');
+  if (!dz) return;
+  const img = (formVal('img') || '').trim();
+  const thumb = dz.querySelector('.dz-thumb');
+  if (img) {
+    thumb.src = img;
+    thumb.style.display = '';
+    dz.classList.add('has-img');
+  } else {
+    thumb.removeAttribute('src');
+    thumb.style.display = 'none';
+    dz.classList.remove('has-img');
+  }
 }
 
 /* ---------- IMAGEN: DRAG & DROP + UPLOAD ---------- */
@@ -294,7 +288,7 @@ async function handleImageFile(file) {
   if (txt) txt.textContent = 'Soltá la imagen acá o hacé clic';
   if (url) {
     $('modal-form').elements['img'].value = url;
-    updatePreview();
+    refreshThumb();
     toast('Imagen subida');
   }
 }
@@ -304,7 +298,13 @@ async function uploadImage(file) {
   const id  = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2);
   const path = `products/${id}.${ext}`;
   const { error } = await sb.storage.from(IMG_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
-  if (error) { toast('Error al subir: ' + error.message, true); return null; }
+  if (error) {
+    const msg = /bucket/i.test(error.message)
+      ? `Falta crear el bucket "${IMG_BUCKET}" en Supabase (corré el SQL de Storage).`
+      : 'Error al subir: ' + error.message;
+    toast(msg, true);
+    return null;
+  }
   return sb.storage.from(IMG_BUCKET).getPublicUrl(path).data?.publicUrl || null;
 }
 
