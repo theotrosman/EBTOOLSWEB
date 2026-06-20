@@ -121,7 +121,7 @@ El proyecto se sirve en **Vercel**. Cada `push` a `master` dispara un deploy aut
 
 - **WhatsApp:** +54 9 11 7134-9389
 - **Instagram:** [@Ebtools](https://www.instagram.com/Ebtools)
-- **MercadoLibre:** [EBTOOLS](https://listado.mercadolibre.com.ar/ebtools)
+- **MercadoLibre:** [EBTOOLS](https://www.mercadolibre.com.ar/pagina/elbahiense)
 
 ---
 
