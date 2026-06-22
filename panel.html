@@ -44,6 +44,7 @@
     <button class="tab active" data-tab="productos">Productos</button>
     <button class="tab" data-tab="categorias">Categorías</button>
     <button class="tab" data-tab="subcategorias">Subcategorías</button>
+    <button class="tab" data-tab="destacados">Destacados</button>
   </nav>
 
   <main class="admin-main">
@@ -73,6 +74,14 @@
         <button class="btn-primary" id="new-subcat-btn">+ Nueva subcategoría</button>
       </div>
       <div id="subcats-table" class="data-table"></div>
+    </section>
+
+    <section id="tab-destacados" class="tab-panel">
+      <div class="panel-head">
+        <h2>Productos destacados</h2>
+      </div>
+      <p class="check-hint" style="margin-bottom:16px">Estos productos rotan en el hero del inicio. Para agregar o quitar, editá el producto y activá <strong>☑ Destacado en el hero</strong>. Cambiá el orden con el campo <strong>Orden en el hero</strong>.</p>
+      <div id="featured-table" class="data-table"></div>
     </section>
   </main>
 </div>

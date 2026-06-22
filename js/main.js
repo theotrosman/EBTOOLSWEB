@@ -3,8 +3,11 @@
 
 gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
-/* ─── ROTATING HERO PRODUCTS (featured) ─── */
-const HERO_FEATURED = [21, 29, 24, 13, 16, 3];   // product IDs to cycle
+/* ─── BADGE COLOR MAP ─── */
+const BADGE_COLORS = {
+  green: '#22c55e', red: '#ef4444', yellow: '#f59e0b',
+  orange: '#f47b20', blue: '#3b82f6', black: '#0f0f0f',
+};
 
 /* ─── ROTATING ACCENT WORDS ─── */
 const ACCENT_WORDS = ['impulsan','transforman','aceleran','equipan','potencian'];
@@ -117,49 +120,77 @@ let heroIdx = 0;
 let heroRotating = false;
 
 function initHeroRotation() {
-  const card  = document.querySelector('.hero-product-card');
-  const img   = card?.querySelector('.hero-product-img');
-  const lname = card?.querySelector('.hero-product-label-name');
-  const lcat  = card?.querySelector('.hero-product-label-cat');
-  const dots  = document.querySelectorAll('.hero-dot');
+  const card   = document.querySelector('.hero-product-card');
+  const img    = card?.querySelector('.hero-product-img');
+  const lname  = card?.querySelector('.hero-product-label-name');
+  const lcat   = card?.querySelector('.hero-product-label-cat');
+  const badge  = document.getElementById('hero-badge');
+  const dotsWrap = document.getElementById('hero-dots');
   if (!card || !img) return;
+
+  // Build featured list from DB; fall back to first 6 products
+  const featuredList = PRODUCTS.filter(p => p.featured).sort((a, b) => a.featured_sort - b.featured_sort);
+  const HERO_IDS = featuredList.length ? featuredList.map(p => p.id) : PRODUCTS.slice(0, 6).map(p => p.id);
+
+  // Render dots dynamically
+  if (dotsWrap) {
+    dotsWrap.innerHTML = HERO_IDS.map((_, i) =>
+      `<button class="hero-dot ${i === 0 ? 'active' : ''}" aria-label="Producto ${i + 1}"></button>`
+    ).join('');
+  }
+
+  function getDots() { return document.querySelectorAll('.hero-dot'); }
+
+  function updateBadge(p) {
+    if (!badge) return;
+    if (p.badge) {
+      badge.textContent = p.badge;
+      badge.style.background = BADGE_COLORS[p.badge_color] || BADGE_COLORS.green;
+      badge.style.display = 'block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
 
   function goTo(idx) {
     if (heroRotating) return;
     heroRotating = true;
 
-    const p = PRODUCTS.find(p => p.id === HERO_FEATURED[idx]);
+    const p = PRODUCTS.find(p => p.id === HERO_IDS[idx]);
     if (!p) { heroRotating = false; return; }
 
-    gsap.timeline({
-      onComplete: () => { heroRotating = false; }
-    })
+    gsap.timeline({ onComplete: () => { heroRotating = false; } })
       .to(img, { opacity: 0, scale: 0.92, duration: 0.3, ease: 'power2.in' })
       .call(() => {
         img.src = p.img;
         img.alt = p.name;
         if (lname) lname.textContent = p.name;
         if (lcat)  lcat.textContent  = getCatLabel(primaryCat(p));
+        updateBadge(p);
       })
       .to(img, { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' });
 
-    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    getDots().forEach((d, i) => d.classList.toggle('active', i === idx));
   }
 
+  // Show first product badge immediately
+  const firstP = PRODUCTS.find(p => p.id === HERO_IDS[0]);
+  if (firstP) updateBadge(firstP);
+
   // Dot clicks
-  dots.forEach((d, i) => {
+  getDots().forEach((d, i) => {
     d.addEventListener('click', () => { heroIdx = i; goTo(i); });
   });
 
   // Click card → open product page
   card.addEventListener('click', () => {
-    const p = PRODUCTS.find(p => p.id === HERO_FEATURED[heroIdx]);
+    const p = PRODUCTS.find(p => p.id === HERO_IDS[heroIdx]);
     if (p) window.location.href = `producto.html?id=${p.id}`;
   });
 
   // Auto-rotate
   setInterval(() => {
-    heroIdx = (heroIdx + 1) % HERO_FEATURED.length;
+    heroIdx = (heroIdx + 1) % HERO_IDS.length;
     goTo(heroIdx);
   }, 4000);
 }
@@ -332,6 +363,7 @@ function renderProducts() {
       <div class="product-img-wrap">
         <img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.opacity='0'">
         <div class="product-cat-tags">${productCatLabels(p).map(l => `<span class="product-cat-tag">${l}</span>`).join('')}</div>
+        ${p.badge ? `<span class="product-badge" style="background:${BADGE_COLORS[p.badge_color]||BADGE_COLORS.green}">${p.badge}</span>` : ''}
       </div>
       <div class="product-body">
         <div class="product-name">${p.name}</div>

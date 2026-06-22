@@ -118,6 +118,7 @@
       <div class="hero-product-card">
         <div class="hero-mark hero-mark--tl"></div>
         <div class="hero-mark hero-mark--br"></div>
+        <span class="hero-product-badge" id="hero-badge" style="display:none"></span>
         <img class="hero-product-img"
           src="https://ebtools.com.ar/wp-content/uploads/2021/02/2-1-1024x1024.jpg"
           alt="Llave de Impacto Neumática"
@@ -128,15 +129,8 @@
         </div>
       </div>
 
-      <!-- Progress dots -->
-      <div class="hero-dots">
-        <button class="hero-dot active" aria-label="Producto 1"></button>
-        <button class="hero-dot" aria-label="Producto 2"></button>
-        <button class="hero-dot" aria-label="Producto 3"></button>
-        <button class="hero-dot" aria-label="Producto 4"></button>
-        <button class="hero-dot" aria-label="Producto 5"></button>
-        <button class="hero-dot" aria-label="Producto 6"></button>
-      </div>
+      <!-- Progress dots (rendered dynamically by main.js) -->
+      <div class="hero-dots" id="hero-dots"></div>
 
       <!-- Chip B -->
       <div class="hero-chip hero-chip--b">

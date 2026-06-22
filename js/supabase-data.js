@@ -49,6 +49,13 @@ async function loadDataFromSupabase() {
       cats: Array.isArray(p.cats) ? p.cats : (p.cat ? [p.cat] : []),
       subcats: Array.isArray(p.subcats) ? p.subcats : (p.subcat ? [p.subcat] : []),
       img: p.img, short: p.short || '', desc: p.descr || '',
+      images:        Array.isArray(p.images)      ? p.images.filter(Boolean)      : [],
+      videos:        Array.isArray(p.videos)      ? p.videos.filter(Boolean)      : [],
+      related_ids:   Array.isArray(p.related_ids) ? p.related_ids                : [],
+      featured:      !!p.featured,
+      featured_sort: p.featured_sort || 0,
+      badge:         p.badge         || '',
+      badge_color:   p.badge_color   || 'green',
     }));
     return true;
   } catch (err) {

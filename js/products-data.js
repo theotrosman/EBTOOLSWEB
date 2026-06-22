@@ -158,7 +158,13 @@ function getProductById(id) {
   return PRODUCTS.find(p => p.id === parseInt(id));
 }
 
-function getRelated(product, limit = 4) {
+function getRelated(product, limit = 12) {
+  if (Array.isArray(product.related_ids) && product.related_ids.length) {
+    return product.related_ids
+      .map(id => PRODUCTS.find(p => p.id === id))
+      .filter(Boolean)
+      .slice(0, limit);
+  }
   const cats = productCats(product);
   return PRODUCTS
     .filter(p => p.id !== product.id && productCats(p).some(c => cats.includes(c)))

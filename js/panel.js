@@ -100,6 +100,7 @@ async function loadAll() {
   renderProducts();
   renderCats();
   renderSubcats();
+  renderFeatured();
 }
 
 const catLabel = k => state.cats.find(c => c.key === k)?.label || k;
@@ -148,6 +149,34 @@ function renderCats() {
       </div>
     </div>`;
   }).join('');
+}
+
+/* ---------- RENDER: FEATURED ---------- */
+function renderFeatured() {
+  const wrap = $('featured-table');
+  if (!wrap) return;
+  const list = state.products
+    .filter(p => p.featured)
+    .sort((a, b) => (a.featured_sort || 0) - (b.featured_sort || 0));
+  if (!list.length) {
+    wrap.innerHTML = '<div class="empty">No hay productos destacados. Editá un producto y activá "Destacado en el hero".</div>';
+    return;
+  }
+  wrap.innerHTML = list.map((p, i) => `
+    <div class="row">
+      <div class="featured-pos">${i + 1}</div>
+      <img src="${esc(p.img)}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="row-main">
+        <div class="row-title">${esc(p.name)}</div>
+        <div class="row-meta">
+          Orden: <strong>${p.featured_sort || 0}</strong>
+          ${p.badge ? `&nbsp;·&nbsp;<span class="feat-badge" style="background:${esc(p.badge_color==='green'?'#22c55e':p.badge_color==='red'?'#ef4444':p.badge_color==='yellow'?'#f59e0b':p.badge_color==='orange'?'#f47b20':p.badge_color==='blue'?'#3b82f6':'#0f0f0f')}">${esc(p.badge)}</span>` : ''}
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="icon-btn" onclick="editProduct(${p.id})">Editar</button>
+      </div>
+    </div>`).join('');
 }
 
 /* ---------- RENDER: SUBCATEGORIES ---------- */
@@ -217,17 +246,80 @@ function subCheckOptions() {
   }));
 }
 
+const BADGE_COLOR_OPTIONS = [
+  { value:'green',  label:'Verde'   },
+  { value:'red',    label:'Rojo'    },
+  { value:'yellow', label:'Amarillo'},
+  { value:'orange', label:'Naranja' },
+  { value:'blue',   label:'Azul'    },
+  { value:'black',  label:'Negro'   },
+];
+
+function extraImgRow(url = '') {
+  return `<div class="extra-row">
+    <input type="text" class="extra-img-input" placeholder="https://..." value="${esc(url)}">
+    <button type="button" class="icon-btn danger extra-remove-btn" onclick="this.closest('.extra-row').remove()" aria-label="Quitar">✕</button>
+  </div>`;
+}
+function extraVidRow(url = '') {
+  return `<div class="extra-row">
+    <input type="text" class="extra-vid-input" placeholder="https://youtube.com/watch?v=..." value="${esc(url)}">
+    <button type="button" class="icon-btn danger extra-remove-btn" onclick="this.closest('.extra-row').remove()" aria-label="Quitar">✕</button>
+  </div>`;
+}
+
 function productForm(p) {
   const selCats = p ? pcats(p) : (state.cats[0] ? [state.cats[0].key] : []);
   const selSubs = p ? psubs(p) : [];
+  const isFeatured = !!p?.featured;
+  const relatedIds = new Set((p?.related_ids || []).map(Number));
+  const extraImgs = Array.isArray(p?.images) ? p.images.filter(Boolean) : [];
+  const extraVids = Array.isArray(p?.videos) ? p.videos.filter(Boolean) : [];
+
+  const relatedBoxes = state.products
+    .filter(x => x.id !== (p?.id || 0))
+    .map(x =>
+      `<label class="chk">
+         <input type="checkbox" name="related_ids" value="${x.id}" ${relatedIds.has(x.id) ? 'checked' : ''}>
+         <span>${esc(x.name)}</span>
+       </label>`
+    ).join('');
+
+  const imgRows = extraImgs.length ? extraImgs.map(extraImgRow).join('') : '';
+  const vidRows = extraVids.length ? extraVids.map(extraVidRow).join('') : '';
+
   return `
     ${fieldText('name','Nombre del producto', p?.name || '')}
     ${fieldChecks('cats','Categorías', catOptions(), selCats, 'Podés elegir más de una.')}
     ${fieldChecks('subcats','Subcategorías', subCheckOptions(), selSubs, 'Se muestran las de las categorías elegidas.')}
     ${imageField(p?.img || '')}
+    <div class="field">
+      <span>Imágenes adicionales (galería)</span>
+      <div class="check-hint">Fotos extra que aparecen en la galería del producto, además de la imagen principal.</div>
+      <div id="extra-imgs" class="extra-list">${imgRows}</div>
+      <button type="button" id="add-extra-img-btn" class="btn-ghost extra-add-btn">+ Agregar imagen</button>
+    </div>
+    <div class="field">
+      <span>Videos</span>
+      <div class="check-hint">URLs de YouTube u otros videos. Se muestran en la página del producto.</div>
+      <div id="extra-vids" class="extra-list">${vidRows}</div>
+      <button type="button" id="add-extra-vid-btn" class="btn-ghost extra-add-btn">+ Agregar video</button>
+    </div>
     ${fieldText('short','Descripción corta', p?.short || '')}
     ${fieldArea('descr','Descripción completa', p?.descr || '')}
-    <label class="check-row"><input type="checkbox" name="active" ${(!p || p.active) ? 'checked' : ''}> <span>Visible en el sitio</span></label>`;
+    <div class="field">
+      <span>Productos recomendados</span>
+      <div class="check-hint">Se muestran abajo en la página del producto. Si no elegís ninguno, se muestran los de la misma categoría.</div>
+      <div class="check-group" id="related-group">${relatedBoxes}</div>
+    </div>
+    <label class="check-row"><input type="checkbox" name="active" ${(!p || p.active) ? 'checked' : ''}> <span>Visible en el sitio</span></label>
+    <label class="check-row"><input type="checkbox" name="featured" id="feat-cb" ${isFeatured ? 'checked' : ''}> <span>Destacado en el hero (inicio)</span></label>
+    <label class="field feat-sort-row" id="feat-sort-row" style="${isFeatured ? '' : 'display:none'}">
+      <span>Orden en el hero (menor = primero)</span>
+      <input type="number" name="featured_sort" value="${p?.featured_sort || 0}" min="0" style="max-width:100px">
+    </label>
+    ${fieldText('badge','Etiqueta del producto (ej: EN OFERTA — dejar vacío para sin etiqueta)', p?.badge || '')}
+    ${fieldSelect('badge_color','Color de la etiqueta', BADGE_COLOR_OPTIONS, p?.badge_color || 'green')}`;
 }
 
 // Campo de imagen: zona para arrastrar/soltar (o clic) que muestra la miniatura
@@ -262,6 +354,31 @@ function bindProductForm() {
   bindDropzone();
   syncSubcatVisibility();
   refreshThumb();
+
+  // Featured toggle → show/hide sort field
+  const featCb = $('feat-cb');
+  const featSortRow = $('feat-sort-row');
+  if (featCb && featSortRow) {
+    featCb.addEventListener('change', () => {
+      featSortRow.style.display = featCb.checked ? '' : 'none';
+    });
+  }
+
+  // Extra images
+  const addImgBtn = $('add-extra-img-btn');
+  if (addImgBtn) {
+    addImgBtn.addEventListener('click', () => {
+      $('extra-imgs').insertAdjacentHTML('beforeend', extraImgRow(''));
+    });
+  }
+
+  // Extra videos
+  const addVidBtn = $('add-extra-vid-btn');
+  if (addVidBtn) {
+    addVidBtn.addEventListener('click', () => {
+      $('extra-vids').insertAdjacentHTML('beforeend', extraVidRow(''));
+    });
+  }
 }
 
 // Refresca la miniatura del dropzone según la URL actual del campo "img".
@@ -353,13 +470,28 @@ function collectProduct() {
   const cats = checkedVals('cats');
   if (!cats.length) { $('modal-msg').textContent = 'Elegí al menos una categoría.'; return null; }
   const subcats = checkedVals('subcats');
+
+  const images = [...$('modal-form').querySelectorAll('.extra-img-input')]
+    .map(i => i.value.trim()).filter(Boolean);
+  const videos = [...$('modal-form').querySelectorAll('.extra-vid-input')]
+    .map(i => i.value.trim()).filter(Boolean);
+  const related_ids = checkedVals('related_ids').map(Number);
+
+  const featCb = $('feat-cb');
+  const featured = featCb ? featCb.checked : false;
+  const featured_sort = parseInt(formVal('featured_sort') || '0', 10) || 0;
+
   return {
     name, slug: slugify(name),
     cats, subcats,
     img: formVal('img').trim(),
+    images, videos, related_ids,
     short: formVal('short').trim(),
     descr: formVal('descr').trim(),
     active: $('modal-form').elements['active'].checked,
+    featured, featured_sort,
+    badge: formVal('badge').trim(),
+    badge_color: formVal('badge_color') || 'green',
   };
 }
 async function delProduct(id) {
@@ -561,6 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
     $('tab-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'destacados') renderFeatured();
   }));
 
   $('product-search').addEventListener('input', e => { state.psearch = e.target.value; renderProducts(); });
