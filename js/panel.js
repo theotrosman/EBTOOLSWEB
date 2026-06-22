@@ -257,15 +257,58 @@ const BADGE_COLOR_OPTIONS = [
 
 function extraImgRow(url = '') {
   return `<div class="extra-row">
-    <input type="text" class="extra-img-input" placeholder="https://..." value="${esc(url)}">
-    <button type="button" class="icon-btn danger extra-remove-btn" onclick="this.closest('.extra-row').remove()" aria-label="Quitar">✕</button>
+    <input type="text" class="extra-img-input" placeholder="https://... o subí un archivo" value="${esc(url)}">
+    <input type="file" class="extra-file-input" accept="image/*" hidden>
+    <button type="button" class="icon-btn extra-upload-btn" onclick="triggerExtraUpload(this)">&#8682; Subir</button>
+    <button type="button" class="icon-btn danger" onclick="this.closest('.extra-row').remove()" aria-label="Quitar">✕</button>
   </div>`;
 }
 function extraVidRow(url = '') {
   return `<div class="extra-row">
-    <input type="text" class="extra-vid-input" placeholder="https://youtube.com/watch?v=..." value="${esc(url)}">
-    <button type="button" class="icon-btn danger extra-remove-btn" onclick="this.closest('.extra-row').remove()" aria-label="Quitar">✕</button>
+    <input type="text" class="extra-vid-input" placeholder="https://youtube.com/watch?v=... o subí un archivo" value="${esc(url)}">
+    <input type="file" class="extra-file-input" accept="video/*,image/*" hidden>
+    <button type="button" class="icon-btn extra-upload-btn" onclick="triggerExtraUpload(this)">&#8682; Subir</button>
+    <button type="button" class="icon-btn danger" onclick="this.closest('.extra-row').remove()" aria-label="Quitar">✕</button>
   </div>`;
+}
+
+async function uploadMediaFile(file) {
+  if (file.size > 50 * 1024 * 1024) { toast('El archivo supera los 50MB.', true); return null; }
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+  const id  = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2);
+  const path = `products/${id}.${ext}`;
+  const { error } = await sb.storage.from(IMG_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  if (error) {
+    const msg = /bucket/i.test(error.message)
+      ? `Falta crear el bucket "${IMG_BUCKET}" en Supabase.`
+      : 'Error al subir: ' + error.message;
+    toast(msg, true);
+    return null;
+  }
+  return sb.storage.from(IMG_BUCKET).getPublicUrl(path).data?.publicUrl || null;
+}
+
+function triggerExtraUpload(btn) {
+  const row = btn.closest('.extra-row');
+  const fileInput = row?.querySelector('.extra-file-input');
+  if (!fileInput) return;
+  fileInput.onchange = async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '...';
+    btn.disabled = true;
+    const url = await uploadMediaFile(file);
+    btn.innerHTML = orig;
+    btn.disabled = false;
+    if (url) {
+      const textInput = row.querySelector('.extra-img-input') || row.querySelector('.extra-vid-input');
+      if (textInput) textInput.value = url;
+      toast('Archivo subido');
+    }
+    fileInput.value = '';
+  };
+  fileInput.click();
 }
 
 function productForm(p) {
