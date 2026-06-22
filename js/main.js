@@ -173,9 +173,17 @@ function initHeroRotation() {
     getDots().forEach((d, i) => d.classList.toggle('active', i === idx));
   }
 
-  // Show first product badge immediately
+  // Render first featured product immediately so the hero shows the right
+  // content from the first frame (otherwise the hardcoded HTML stays visible
+  // until the first 4s interval tick, and the destacado #1 is skipped).
   const firstP = PRODUCTS.find(p => p.id === HERO_IDS[0]);
-  if (firstP) updateBadge(firstP);
+  if (firstP) {
+    img.src = firstP.img;
+    img.alt = firstP.name;
+    if (lname) lname.textContent = firstP.name;
+    if (lcat)  lcat.textContent  = getCatLabel(primaryCat(firstP));
+    updateBadge(firstP);
+  }
 
   // Dot clicks
   getDots().forEach((d, i) => {
@@ -529,11 +537,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   animateCounters();
   initScrollReveal();
 
-  // Hero sequences (slight delay for fonts/images)
+  // Hero sequences (slight delay for fonts/images).
+  // initHeroRotation() corre PRIMERO para que la card entre ya con el primer
+  // producto destacado (no con el HTML hardcodeado).
   gsap.delayedCall(0.1, () => {
+    initHeroRotation();
     heroEntrance();
     initAccentRotation();
-    initHeroRotation();
   });
 });
 
