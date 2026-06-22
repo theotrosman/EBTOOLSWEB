@@ -9,6 +9,7 @@ alter table products add column if not exists featured      boolean  not null de
 alter table products add column if not exists featured_sort int      not null default 0;
 alter table products add column if not exists badge         text     not null default '';
 alter table products add column if not exists badge_color   text     not null default 'green';
+alter table products add column if not exists badge_enabled boolean  not null default false;
 
 -- Marca los primeros 6 productos activos como destacados en el hero.
 -- Podés cambiarlos luego desde el panel: Productos → Editar → ☑ Destacado en el hero.

@@ -78,9 +78,14 @@
 
     <section id="tab-destacados" class="tab-panel">
       <div class="panel-head">
-        <h2>Productos destacados</h2>
+        <h2>Destacados en el inicio</h2>
+        <button class="btn-primary" id="save-featured-btn">Guardar cambios</button>
       </div>
-      <p class="check-hint" style="margin-bottom:16px">Estos productos rotan en el hero del inicio. Para agregar o quitar, editá el producto y activá <strong>☑ Destacado en el hero</strong>. Cambiá el orden con el campo <strong>Orden en el hero</strong>.</p>
+      <p class="check-hint" style="margin-bottom:14px">
+        Elegí qué productos aparecen en el <strong>carrusel</strong> que rota arriba de todo en la página de inicio.<br>
+        Tildá <strong>"En el hero"</strong> para activarlo y escribí el <strong>número de orden</strong> en que aparecerá (1 = primero).
+      </p>
+      <input type="text" id="featured-search" class="admin-search" placeholder="Buscar producto...">
       <div id="featured-table" class="data-table"></div>
     </section>
   </main>

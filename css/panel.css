@@ -136,3 +136,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
 /* FEATURED TAB */
 .featured-pos{width:28px;height:28px;flex-shrink:0;border-radius:50%;background:var(--orange);color:#fff;font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center}
 .feat-badge{display:inline-block;color:#fff;font-size:.65rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:4px;vertical-align:middle}
+
+/* FEATURED PICKER (tab Destacados) */
+.row.feat-on{background:#fff8f3;border-color:#f8c89e}
+.feat-check-label{display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.feat-check-label input[type="checkbox"]{width:16px;height:16px;accent-color:var(--orange);flex-shrink:0;margin:0;padding:0}
+.feat-check-text{font-size:.82rem;font-weight:700;color:var(--g700)}
+.feat-order{width:64px;border:1px solid var(--g300);border-radius:6px;padding:6px 8px;font-size:.85rem;text-align:center;font-family:var(--font);flex-shrink:0;background:#fff}
+.feat-order:focus{outline:none;border-color:var(--orange)}

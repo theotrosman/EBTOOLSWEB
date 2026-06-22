@@ -42,6 +42,7 @@ create table if not exists products (
   featured_sort  int      not null default 0,
   badge          text     not null default '',
   badge_color    text     not null default 'green',
+  badge_enabled  boolean  not null default false,
   sort           int      not null default 0,
   active         boolean  not null default true,
   created_at     timestamptz not null default now()

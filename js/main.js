@@ -143,7 +143,7 @@ function initHeroRotation() {
 
   function updateBadge(p) {
     if (!badge) return;
-    if (p.badge) {
+    if (p.badge && p.badge_enabled) {
       badge.textContent = p.badge;
       badge.style.background = BADGE_COLORS[p.badge_color] || BADGE_COLORS.green;
       badge.style.display = 'block';
@@ -363,7 +363,7 @@ function renderProducts() {
       <div class="product-img-wrap">
         <img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.opacity='0'">
         <div class="product-cat-tags">${productCatLabels(p).map(l => `<span class="product-cat-tag">${l}</span>`).join('')}</div>
-        ${p.badge ? `<span class="product-badge" style="background:${BADGE_COLORS[p.badge_color]||BADGE_COLORS.green}">${p.badge}</span>` : ''}
+        ${(p.badge && p.badge_enabled) ? `<span class="product-badge" style="background:${BADGE_COLORS[p.badge_color]||BADGE_COLORS.green}">${p.badge}</span>` : ''}
       </div>
       <div class="product-body">
         <div class="product-name">${p.name}</div>

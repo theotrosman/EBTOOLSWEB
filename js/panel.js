@@ -5,6 +5,7 @@ const CONFIGURED = CFG.SUPABASE_URL && !CFG.SUPABASE_URL.includes('__SUPABASE_UR
 
 let sb = null;
 const state = { cats: [], subcats: [], products: [], psearch: '' };
+const _featChanged = new Set(); // IDs whose featured/featured_sort changed in the Destacados picker
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
@@ -97,6 +98,7 @@ async function loadAll() {
   state.cats = c.data || [];
   state.subcats = s.data || [];
   state.products = p.data || [];
+  _featChanged.clear();
   renderProducts();
   renderCats();
   renderSubcats();
@@ -151,32 +153,79 @@ function renderCats() {
   }).join('');
 }
 
-/* ---------- RENDER: FEATURED ---------- */
+/* ---------- RENDER: FEATURED PICKER ---------- */
 function renderFeatured() {
   const wrap = $('featured-table');
   if (!wrap) return;
-  const list = state.products
-    .filter(p => p.featured)
-    .sort((a, b) => (a.featured_sort || 0) - (b.featured_sort || 0));
-  if (!list.length) {
-    wrap.innerHTML = '<div class="empty">No hay productos destacados. Editá un producto y activá "Destacado en el hero".</div>';
-    return;
-  }
-  wrap.innerHTML = list.map((p, i) => `
-    <div class="row">
-      <div class="featured-pos">${i + 1}</div>
+  const q = ($('featured-search')?.value || '').toLowerCase();
+  let list = [...state.products];
+  if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || pcats(p).map(catLabel).join(' ').toLowerCase().includes(q));
+
+  // Featured products first (sorted by featured_sort), then rest alphabetically
+  list.sort((a, b) => {
+    if (a.featured && !b.featured) return -1;
+    if (!a.featured && b.featured) return 1;
+    if (a.featured && b.featured) return (a.featured_sort || 0) - (b.featured_sort || 0);
+    return a.name.localeCompare(b.name, 'es');
+  });
+
+  if (!list.length) { wrap.innerHTML = '<div class="empty">No hay productos que coincidan.</div>'; return; }
+
+  wrap.innerHTML = list.map(p => {
+    const isFeat = !!p.featured;
+    return `<div class="row${isFeat ? ' feat-on' : ''}">
       <img src="${esc(p.img)}" alt="" onerror="this.style.visibility='hidden'">
       <div class="row-main">
         <div class="row-title">${esc(p.name)}</div>
-        <div class="row-meta">
-          Orden: <strong>${p.featured_sort || 0}</strong>
-          ${p.badge ? `&nbsp;·&nbsp;<span class="feat-badge" style="background:${esc(p.badge_color==='green'?'#22c55e':p.badge_color==='red'?'#ef4444':p.badge_color==='yellow'?'#f59e0b':p.badge_color==='orange'?'#f47b20':p.badge_color==='blue'?'#3b82f6':'#0f0f0f')}">${esc(p.badge)}</span>` : ''}
-        </div>
+        <div class="row-meta">${pcats(p).map(c => `<span class="tag">${esc(catLabel(c))}</span>`).join('')}</div>
       </div>
-      <div class="row-actions">
-        <button class="icon-btn" onclick="editProduct(${p.id})">Editar</button>
-      </div>
-    </div>`).join('');
+      <label class="feat-check-label">
+        <input type="checkbox" class="feat-cb" ${isFeat ? 'checked' : ''} onchange="onFeatToggle(this,${p.id})">
+        <span class="feat-check-text">En el hero</span>
+      </label>
+      <input type="number" class="feat-order" value="${p.featured_sort || 0}" min="0" placeholder="Orden"
+             title="Orden en el carrusel (1 = primero)"
+             style="${isFeat ? '' : 'visibility:hidden'}"
+             oninput="onFeatOrder(this,${p.id})">
+    </div>`;
+  }).join('');
+}
+
+function onFeatToggle(cb, id) {
+  const p = state.products.find(x => x.id === id);
+  if (!p) return;
+  p.featured = cb.checked;
+  if (!cb.checked) p.featured_sort = 0;
+  _featChanged.add(id);
+  const row = cb.closest('.row');
+  row?.classList.toggle('feat-on', cb.checked);
+  const orderInput = row?.querySelector('.feat-order');
+  if (orderInput) orderInput.style.visibility = cb.checked ? '' : 'hidden';
+}
+
+function onFeatOrder(input, id) {
+  const p = state.products.find(x => x.id === id);
+  if (p) { p.featured_sort = parseInt(input.value || '0', 10) || 0; _featChanged.add(id); }
+}
+
+async function saveFeatured() {
+  if (!_featChanged.size) { toast('Sin cambios que guardar'); return; }
+  const btn = $('save-featured-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  const toUpdate = state.products.filter(p => _featChanged.has(p.id));
+  const results = await Promise.all(toUpdate.map(p =>
+    sb.from('products').update({ featured: !!p.featured, featured_sort: p.featured_sort || 0 }).eq('id', p.id)
+  ));
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+
+  const firstError = results.find(r => r.error);
+  if (firstError?.error) { toast('Error: ' + firstError.error.message, true); return; }
+
+  _featChanged.clear();
+  toast(`${toUpdate.length} producto(s) actualizado(s)`);
+  renderFeatured();
 }
 
 /* ---------- RENDER: SUBCATEGORIES ---------- */
@@ -361,8 +410,23 @@ function productForm(p) {
       <span>Orden en el hero (menor = primero)</span>
       <input type="number" name="featured_sort" value="${p?.featured_sort || 0}" min="0" style="max-width:100px">
     </label>
-    ${fieldText('badge','Etiqueta del producto (ej: EN OFERTA — dejar vacío para sin etiqueta)', p?.badge || '')}
-    ${fieldSelect('badge_color','Color de la etiqueta', BADGE_COLOR_OPTIONS, p?.badge_color || 'green')}`;
+    <div class="field">
+      <span>ETIQUETA DEL PRODUCTO</span>
+      <div class="check-hint">
+        Un cartelito de color que aparece sobre la foto del producto.
+        Ejemplos: <b>EN OFERTA</b>, <b>NUEVO</b>, <b>LIQUIDACIÓN</b>.
+        Podés escribir el texto y elegir el color. Activá el interruptor para que se vea en el sitio;
+        desactivalo para ocultarlo sin borrar el texto.
+      </div>
+      <label class="check-row" style="margin-bottom:10px">
+        <input type="checkbox" name="badge_enabled" id="badge-enabled-cb" ${p?.badge_enabled ? 'checked' : ''}>
+        <strong>Mostrar etiqueta en el sitio</strong>
+      </label>
+      <div id="badge-fields" style="${p?.badge_enabled ? '' : 'display:none'}">
+        ${fieldText('badge', 'Texto de la etiqueta (ej: EN OFERTA, NUEVO, LIQUIDACIÓN)', p?.badge || '')}
+        ${fieldSelect('badge_color', 'Color de la etiqueta', BADGE_COLOR_OPTIONS, p?.badge_color || 'green')}
+      </div>
+    </div>`;
 }
 
 // Campo de imagen: zona para arrastrar/soltar (o clic) que muestra la miniatura
@@ -404,6 +468,15 @@ function bindProductForm() {
   if (featCb && featSortRow) {
     featCb.addEventListener('change', () => {
       featSortRow.style.display = featCb.checked ? '' : 'none';
+    });
+  }
+
+  // Badge enabled toggle
+  const badgeCb = $('badge-enabled-cb');
+  const badgeFields = $('badge-fields');
+  if (badgeCb && badgeFields) {
+    badgeCb.addEventListener('change', () => {
+      badgeFields.style.display = badgeCb.checked ? '' : 'none';
     });
   }
 
@@ -535,6 +608,7 @@ function collectProduct() {
     featured, featured_sort,
     badge: formVal('badge').trim(),
     badge_color: formVal('badge_color') || 'green',
+    badge_enabled: !!$('modal-form').elements['badge_enabled']?.checked,
   };
 }
 async function delProduct(id) {
@@ -740,6 +814,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }));
 
   $('product-search').addEventListener('input', e => { state.psearch = e.target.value; renderProducts(); });
+  $('featured-search')?.addEventListener('input', renderFeatured);
+  $('save-featured-btn')?.addEventListener('click', saveFeatured);
   $('new-product-btn').addEventListener('click', newProduct);
   $('import-products-btn').addEventListener('click', importProducts);
   $('new-cat-btn').addEventListener('click', newCat);

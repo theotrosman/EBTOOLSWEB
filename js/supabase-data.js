@@ -56,6 +56,7 @@ async function loadDataFromSupabase() {
       featured_sort: p.featured_sort || 0,
       badge:         p.badge         || '',
       badge_color:   p.badge_color   || 'green',
+      badge_enabled: !!p.badge_enabled,
     }));
     return true;
   } catch (err) {
