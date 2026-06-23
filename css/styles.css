@@ -711,16 +711,29 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
 .modal-close:hover { background: var(--black); color: var(--white); }
 .modal-tag { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--orange); margin-bottom: 8px; }
 .modal-name { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: var(--black); margin-bottom: 12px; line-height: 1.15; }
-.modal-desc { font-size: 0.85rem; color: var(--gray-500); line-height: 1.65; flex: 1; }
-.modal-actions { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; }
+/* El modal es una preview. La descripción se clampea para que los botones
+   siempre sean visibles — el gradiente señala que hay más contenido, y
+   "Ver página completa" es el CTA natural para leer todo. */
+.modal-desc {
+  font-size: 0.85rem; color: var(--gray-500); line-height: 1.65;
+  position: relative;
+  max-height: 128px; overflow: hidden;
+}
+.modal-desc::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 52px;
+  background: linear-gradient(to bottom, transparent, var(--white));
+  pointer-events: none;
+}
+.modal-actions { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
 .modal-btn-wa {
   display: flex; align-items: center; justify-content: center; gap: 9px;
-  background: var(--wa); color: var(--white);
+  background: var(--orange); color: var(--white);
   padding: 13px; border-radius: 7px;
   font-size: 0.9rem; font-weight: 700;
   text-decoration: none; transition: var(--t);
 }
-.modal-btn-wa:hover { background: #1ebe5d; }
+.modal-btn-wa:hover { background: var(--orange-dark); }
 .modal-btn-wa svg { width: 18px; height: 18px; }
 .modal-btn-page {
   display: flex; align-items: center; justify-content: center; gap: 8px;
