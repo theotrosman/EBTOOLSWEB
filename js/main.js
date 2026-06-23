@@ -203,6 +203,31 @@ function initHeroRotation() {
   }, 4000);
 }
 
+/* ─── DYNAMIC STATS (count from the loaded data) ─── */
+function applyDynamicStats() {
+  // Stats que dependen de los datos actuales (DB o fallback).
+  // El catálogo público solo carga productos activos, así que esto refleja
+  // exactamente lo que ve el visitante.
+  const counts = {
+    products: PRODUCTS.length,
+    categories: CATEGORIES.length,
+    subcategories: SUBCATEGORIES.length,
+    featured: PRODUCTS.filter(p => p.featured).length,
+  };
+  document.querySelectorAll('[data-stat]').forEach(el => {
+    const key = el.dataset.stat;
+    if (counts[key] != null) {
+      el.dataset.count = counts[key];
+      el.textContent = '0' + (el.dataset.suffix || '');
+    }
+  });
+  // Chips flotantes del hero
+  const chipProducts = document.getElementById('hero-chip-products');
+  const chipCats     = document.getElementById('hero-chip-cats');
+  if (chipProducts) chipProducts.textContent = '+' + counts.products;
+  if (chipCats)     chipCats.textContent     = counts.categories;
+}
+
 /* ─── STATS COUNTER ─── */
 function animateCounters() {
   document.querySelectorAll('[data-count]').forEach(el => {
@@ -534,6 +559,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSearch();
   initModal();
   initScrollTop();
+  applyDynamicStats();
   animateCounters();
   initScrollReveal();
 

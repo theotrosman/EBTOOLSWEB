@@ -13,17 +13,19 @@ drop table if exists categories    cascade;
 
 -- ---------- TABLAS ----------
 create table if not exists categories (
-  key   text primary key,
-  label text not null,
-  icon  text,
-  sort  int  not null default 0
+  key        text primary key,
+  label      text not null,
+  icon       text,
+  sort       int  not null default 0,
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists subcategories (
-  key   text primary key,
-  cat   text not null references categories(key) on delete cascade,
-  label text not null,
-  sort  int  not null default 0
+  key        text primary key,
+  cat        text not null references categories(key) on delete cascade,
+  label      text not null,
+  sort       int  not null default 0,
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists products (
@@ -45,11 +47,39 @@ create table if not exists products (
   badge_enabled  boolean  not null default false,
   sort           int      not null default 0,
   active         boolean  not null default true,
-  created_at     timestamptz not null default now()
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
 );
 
-create index if not exists products_cats_idx    on products using gin(cats);
-create index if not exists products_subcats_idx on products using gin(subcats);
+create index if not exists products_cats_idx       on products using gin(cats);
+create index if not exists products_subcats_idx    on products using gin(subcats);
+create index if not exists products_updated_at_idx on products (updated_at desc);
+create index if not exists categories_updated_at_idx    on categories    (updated_at desc);
+create index if not exists subcategories_updated_at_idx on subcategories (updated_at desc);
+
+-- ---------- TRIGGER updated_at ----------
+create or replace function set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$;
+
+drop trigger if exists trg_products_updated_at      on products;
+drop trigger if exists trg_categories_updated_at    on categories;
+drop trigger if exists trg_subcategories_updated_at on subcategories;
+
+create trigger trg_products_updated_at
+  before insert or update on products
+  for each row execute function set_updated_at();
+
+create trigger trg_categories_updated_at
+  before insert or update on categories
+  for each row execute function set_updated_at();
+
+create trigger trg_subcategories_updated_at
+  before insert or update on subcategories
+  for each row execute function set_updated_at();
 
 -- ---------- RLS ----------
 alter table categories    enable row level security;

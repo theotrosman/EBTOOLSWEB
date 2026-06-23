@@ -4,7 +4,39 @@ const CONFIGURED = CFG.SUPABASE_URL && !CFG.SUPABASE_URL.includes('__SUPABASE_UR
   CFG.SUPABASE_ANON_KEY && !CFG.SUPABASE_ANON_KEY.includes('__SUPABASE_ANON_KEY__');
 
 let sb = null;
-const state = { cats: [], subcats: [], products: [], psearch: '' };
+const state = { cats: [], subcats: [], products: [], psearch: '', psort: 'recent' };
+
+// Devuelve "hace 3 min", "ayer", "12 abr", etc. para mostrar al lado de cada fila.
+function relativeTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const diffMs = Date.now() - d.getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1)  return 'recién';
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24)   return `hace ${h} h`;
+  const days = Math.floor(h / 24);
+  if (days === 1) return 'ayer';
+  if (days < 7)   return `hace ${days} días`;
+  // Más de una semana → fecha corta (ej. "12 abr" o "12 abr 2025" si es otro año).
+  const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return sameYear
+    ? `${d.getDate()} ${months[d.getMonth()]}`
+    : `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function fullTimestamp(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toLocaleString('es-AR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
 const _featChanged = new Set(); // IDs whose featured/featured_sort changed in the Destacados picker
 
 const $ = id => document.getElementById(id);
@@ -109,16 +141,54 @@ const catLabel = k => state.cats.find(c => c.key === k)?.label || k;
 const subLabel = k => state.subcats.find(s => s.key === k)?.label || (k || '—');
 
 /* ---------- RENDER: PRODUCTS ---------- */
+function sortProductsList(list, mode) {
+  const sorted = [...list];
+  switch (mode) {
+    case 'name':
+      return sorted.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es'));
+    case 'sort':
+      return sorted.sort((a, b) => (a.sort || 0) - (b.sort || 0) || a.id - b.id);
+    case 'new':
+      return sorted.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    case 'recent':
+    default:
+      return sorted.sort((a, b) =>
+        new Date(b.updated_at || b.created_at || 0) -
+        new Date(a.updated_at || a.created_at || 0));
+  }
+}
+
 function renderProducts() {
   const wrap = $('products-table');
   const q = state.psearch.toLowerCase();
-  const list = state.products.filter(p => !q || p.name.toLowerCase().includes(q) || pcats(p).map(catLabel).join(' ').toLowerCase().includes(q));
+  let list = state.products.filter(p =>
+    !q ||
+    p.name.toLowerCase().includes(q) ||
+    pcats(p).map(catLabel).join(' ').toLowerCase().includes(q));
+  list = sortProductsList(list, state.psort);
+
   if (!list.length) { wrap.innerHTML = '<div class="empty">Sin productos.</div>'; return; }
-  wrap.innerHTML = list.map(p => `
+
+  // Resaltar el chip de fecha cuando el producto se editó hace menos de 7 días
+  // (ayuda al admin a ver de un pantallazo qué se tocó recientemente).
+  const RECENT_MS = 7 * 24 * 60 * 60 * 1000;
+
+  wrap.innerHTML = list.map(p => {
+    const ts = p.updated_at || p.created_at;
+    const isRecent = ts && (Date.now() - new Date(ts).getTime()) < RECENT_MS;
+    const rel  = relativeTime(ts);
+    const full = fullTimestamp(ts);
+    const stamp = ts
+      ? `<span class="row-stamp${isRecent ? ' recent' : ''}" title="Última edición: ${esc(full)}">
+           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+           ${esc(rel)}
+         </span>`
+      : '';
+    return `
     <div class="row">
       <img src="${esc(p.img)}" alt="" onerror="this.style.visibility='hidden'">
       <div class="row-main">
-        <div class="row-title">${esc(p.name)}</div>
+        <div class="row-title">${esc(p.name)} ${stamp}</div>
         <div class="row-meta">
           ${pcats(p).map(c => `<span class="tag">${esc(catLabel(c))}</span>`).join('')}
           ${psubs(p).map(s => `<span class="tag tag-sub">${esc(subLabel(s))}</span>`).join('')}
@@ -129,7 +199,8 @@ function renderProducts() {
         <button class="icon-btn" onclick="editProduct(${p.id})">Editar</button>
         <button class="icon-btn danger" onclick="delProduct(${p.id})">Borrar</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 /* ---------- RENDER: CATEGORIES ---------- */
@@ -684,6 +755,35 @@ function catForm(c, isNew) {
   const choices = PRESET_ICONS.map(ic =>
     `<button type="button" class="icon-choice${!isCustom && cur === ic.svg ? ' sel' : ''}" data-svg="${esc(ic.svg)}" title="${esc(ic.name)}">${ic.svg}</button>`
   ).join('');
+
+  // Solo cuando se EDITA (no al crear) mostramos la lista de productos
+  // para asignar/quitar directamente desde acá.
+  let productsPicker = '';
+  if (!isNew && c) {
+    const inCat = state.products.filter(p => pcats(p).includes(c.key));
+    const outCat = state.products.filter(p => !pcats(p).includes(c.key));
+    productsPicker = `
+      <div class="field cat-products-field">
+        <span>Productos en esta categoría <span class="count-badge" id="cat-prod-count">${inCat.length}</span></span>
+        <div class="check-hint">
+          Tildá los productos para que pertenezcan a <b>${esc(c.label)}</b>.
+          Destildá para quitarlos. Los cambios se guardan al apretar <b>Guardar</b>.
+        </div>
+        <input type="text" id="cat-prod-search" class="cat-prod-search" placeholder="Buscar producto...">
+        <div class="cat-products-list" data-cat-key="${esc(c.key)}">
+          ${[...inCat, ...outCat].map(p => {
+            const checked = pcats(p).includes(c.key);
+            return `<label class="cat-prod-item${checked ? ' on' : ''}">
+              <input type="checkbox" name="cat_products" value="${p.id}" ${checked ? 'checked' : ''}>
+              <img src="${esc(p.img || '')}" alt="" onerror="this.style.visibility='hidden'">
+              <span class="cat-prod-name">${esc(p.name)}</span>
+              <span class="cat-prod-meta">${pcats(p).map(k => esc(catLabel(k))).join(', ') || '—'}</span>
+            </label>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
   return `
     ${fieldText('label','Nombre de la categoría', c?.label || '')}
     <div class="field"><span>Ícono</span>
@@ -694,7 +794,66 @@ function catForm(c, isNew) {
         <summary>Usar otro ícono (avanzado)</summary>
         <textarea name="iconCustom" placeholder="Pegá acá el código SVG">${isCustom ? esc(cur) : ''}</textarea>
       </details>
-    </div>`;
+    </div>
+    ${productsPicker}`;
+}
+
+// Filtro en vivo + contador de la lista de productos del editor de categorías/subcategorías.
+function bindAssignProductsPicker() {
+  const search = $('cat-prod-search');
+  const list   = $('modal-form')?.querySelector('.cat-products-list');
+  const count  = $('cat-prod-count');
+  if (!list) return;
+
+  function refreshCount() {
+    if (!count) return;
+    count.textContent = list.querySelectorAll('input[type="checkbox"]:checked').length;
+  }
+  list.addEventListener('change', e => {
+    if (e.target.matches('input[type="checkbox"]')) {
+      e.target.closest('.cat-prod-item')?.classList.toggle('on', e.target.checked);
+      refreshCount();
+    }
+  });
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      list.querySelectorAll('.cat-prod-item').forEach(el => {
+        const txt = el.querySelector('.cat-prod-name')?.textContent.toLowerCase() || '';
+        el.style.display = !q || txt.includes(q) ? '' : 'none';
+      });
+    });
+  }
+  refreshCount();
+}
+
+// Aplica los cambios de asignación de productos al guardar una categoría o subcategoría.
+// `field` es 'cats' o 'subcats'. `key` es la categoría/subcategoría editada.
+// Devuelve un objeto con cuántos productos se agregaron / quitaron.
+async function applyProductAssignments(field, key) {
+  const list = $('modal-form')?.querySelector('.cat-products-list');
+  if (!list) return { added: 0, removed: 0, errors: [] };
+  const desiredIds = new Set(
+    [...list.querySelectorAll('input[name="cat_products"]:checked')].map(i => Number(i.value))
+  );
+  const updates = [];
+  for (const p of state.products) {
+    const arr = field === 'cats' ? pcats(p) : psubs(p);
+    const has = arr.includes(key);
+    const should = desiredIds.has(p.id);
+    if (has === should) continue;
+    const next = should ? [...new Set([...arr, key])] : arr.filter(k => k !== key);
+    updates.push({ id: p.id, next, was: has });
+  }
+  const results = await Promise.all(updates.map(u =>
+    sb.from('products').update({ [field]: u.next }).eq('id', u.id)
+  ));
+  const errors = results.filter(r => r.error).map(r => r.error.message);
+  return {
+    added:   updates.filter(u => !u.was).length,
+    removed: updates.filter(u =>  u.was).length,
+    errors,
+  };
 }
 // Conecta los botones del selector de íconos y el campo SVG avanzado.
 function bindCatForm() {
@@ -736,9 +895,23 @@ function editCat(key) {
     if (!label) { $('modal-msg').textContent = 'Escribí el nombre de la categoría.'; return; }
     const icon = formVal('iconCustom').trim() || formVal('icon').trim() || c.icon || DEFAULT_CAT_ICON;
     const { error } = await sb.from('categories').update({ label, icon }).eq('key', key);
-    afterSave(error, 'Categoría actualizada');
+    if (error) { afterSave(error, ''); return; }
+    const diff = await applyProductAssignments('cats', key);
+    if (diff.errors.length) {
+      $('modal-msg').textContent = 'Categoría guardada, pero falló al asignar productos: ' + diff.errors[0];
+      toast('Error parcial al asignar productos', true);
+      await loadAll();
+      return;
+    }
+    closeModal();
+    const parts = ['Categoría actualizada'];
+    if (diff.added)   parts.push(`+${diff.added} producto(s)`);
+    if (diff.removed) parts.push(`-${diff.removed} producto(s)`);
+    toast(parts.join(' · '));
+    await loadAll();
   });
   bindCatForm();
+  bindAssignProductsPicker();
 }
 async function delCat(key) {
   const n = state.products.filter(p => pcats(p).includes(key)).length;
@@ -750,9 +923,42 @@ async function delCat(key) {
 
 /* ---------- SUBCATEGORY CRUD ---------- */
 function subcatForm(s, isNew) {
+  let productsPicker = '';
+  if (!isNew && s) {
+    // Para subcategorías mostramos primero los productos de la categoría padre
+    // (lo que tiene sentido asignar acá), pero permitimos buscar entre todos.
+    const inSub = state.products.filter(p => psubs(p).includes(s.key));
+    const inParentCat = state.products.filter(p =>
+      !psubs(p).includes(s.key) && pcats(p).includes(s.cat));
+    const rest = state.products.filter(p =>
+      !psubs(p).includes(s.key) && !pcats(p).includes(s.cat));
+    const ordered = [...inSub, ...inParentCat, ...rest];
+    productsPicker = `
+      <div class="field cat-products-field">
+        <span>Productos en esta subcategoría <span class="count-badge" id="cat-prod-count">${inSub.length}</span></span>
+        <div class="check-hint">
+          Tildá los productos para asignarlos a <b>${esc(s.label)}</b>.
+          Se muestran primero los de la categoría padre <b>${esc(catLabel(s.cat))}</b>.
+        </div>
+        <input type="text" id="cat-prod-search" class="cat-prod-search" placeholder="Buscar producto...">
+        <div class="cat-products-list" data-sub-key="${esc(s.key)}">
+          ${ordered.map(p => {
+            const checked = psubs(p).includes(s.key);
+            const parentMatch = pcats(p).includes(s.cat);
+            return `<label class="cat-prod-item${checked ? ' on' : ''}${parentMatch ? '' : ' dim'}">
+              <input type="checkbox" name="cat_products" value="${p.id}" ${checked ? 'checked' : ''}>
+              <img src="${esc(p.img || '')}" alt="" onerror="this.style.visibility='hidden'">
+              <span class="cat-prod-name">${esc(p.name)}</span>
+              <span class="cat-prod-meta">${pcats(p).map(k => esc(catLabel(k))).join(', ') || '—'}</span>
+            </label>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
   return `
     ${fieldSelect('cat','¿A qué categoría pertenece?', catOptions(), s?.cat || state.cats[0]?.key || '')}
-    ${fieldText('label','Nombre de la subcategoría', s?.label || '')}`;
+    ${fieldText('label','Nombre de la subcategoría', s?.label || '')}
+    ${productsPicker}`;
 }
 function newSubcat() {
   openModal('Nueva subcategoría', subcatForm(null, true), async () => {
@@ -773,8 +979,22 @@ function editSubcat(key) {
     const label = formVal('label').trim();
     if (!label) { $('modal-msg').textContent = 'Escribí el nombre de la subcategoría.'; return; }
     const { error } = await sb.from('subcategories').update({ cat: formVal('cat'), label }).eq('key', key);
-    afterSave(error, 'Subcategoría actualizada');
+    if (error) { afterSave(error, ''); return; }
+    const diff = await applyProductAssignments('subcats', key);
+    if (diff.errors.length) {
+      $('modal-msg').textContent = 'Subcategoría guardada, pero falló al asignar productos: ' + diff.errors[0];
+      toast('Error parcial al asignar productos', true);
+      await loadAll();
+      return;
+    }
+    closeModal();
+    const parts = ['Subcategoría actualizada'];
+    if (diff.added)   parts.push(`+${diff.added} producto(s)`);
+    if (diff.removed) parts.push(`-${diff.removed} producto(s)`);
+    toast(parts.join(' · '));
+    await loadAll();
   });
+  bindAssignProductsPicker();
 }
 async function delSubcat(key) {
   const n = state.products.filter(p => psubs(p).includes(key)).length;
@@ -814,6 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }));
 
   $('product-search').addEventListener('input', e => { state.psearch = e.target.value; renderProducts(); });
+  $('product-sort')?.addEventListener('change', e => { state.psort = e.target.value; renderProducts(); });
   $('featured-search')?.addEventListener('input', renderFeatured);
   $('save-featured-btn')?.addEventListener('click', saveFeatured);
   $('new-product-btn').addEventListener('click', newProduct);

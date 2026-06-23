@@ -56,7 +56,18 @@
           <button class="btn-primary" id="new-product-btn">+ Nuevo producto</button>
         </div>
       </div>
-      <input type="text" id="product-search" class="admin-search" placeholder="Buscar producto...">
+      <div class="filter-bar">
+        <input type="text" id="product-search" class="admin-search" placeholder="Buscar producto...">
+        <label class="filter-bar-select">
+          <span>Ordenar por</span>
+          <select id="product-sort">
+            <option value="recent">Editados recientemente</option>
+            <option value="name">Nombre (A → Z)</option>
+            <option value="sort">Orden manual del catálogo</option>
+            <option value="new">Más nuevos primero</option>
+          </select>
+        </label>
+      </div>
       <div id="products-table" class="data-table"></div>
     </section>
 
