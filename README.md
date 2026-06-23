@@ -1,123 +1,69 @@
 # EBTOOLS — Sitio web y catálogo
 
-Sitio web y catálogo de productos de **EBTOOLS**, importadores y distribuidores de herramientas y equipamiento industrial en Argentina (neumáticas, construcción, agro, gastronomía y más).
-
-Es un sitio **estático** (HTML/CSS/JS sin framework ni build) con los datos en **Supabase**, e incluye un **backoffice** simple para que el equipo cargue productos, categorías e imágenes sin tocar código.
+Sitio web y catálogo de productos de **EBTOOLS**, importadores y distribuidores de herramientas y equipamiento industrial en Argentina — neumáticas, construcción, agro, gastronomía y más.
 
 ---
 
-## ✨ Características
+## El proyecto
 
-- **Landing + catálogo** con buscador, filtros por categoría y subcategoría, y página de detalle por producto.
-- **Multi-categoría:** cada producto puede pertenecer a varias categorías y subcategorías.
-- **Backoffice** (`/panel.html`) con login, pensado para personas que no saben de webs:
-  - Alta/edición/borrado de **productos, categorías y subcategorías**.
-  - **Subida de imágenes** por arrastrar y soltar (o pegando una URL).
-  - **Selector visual de íconos** para las categorías (con opción avanzada de pegar un SVG propio).
-  - **Importación masiva** de productos pegando un array JSON.
-- **Animaciones** con GSAP (entrada del hero, ticker de rubros, scroll reveal).
-- **Datos en vivo desde Supabase** con _fallback_ a datos incluidos: si la base no responde, el sitio igual muestra el catálogo.
-- Contacto directo por **WhatsApp** y links a Instagram / MercadoLibre.
+EBTOOLS necesitaba una presencia digital que transmitiera seriedad y facilitara el contacto con clientes. Se construyó un sitio completo: landing institucional, catálogo de productos con filtros, y página de detalle por producto — todo conectado a una base de datos en vivo para que el equipo pueda actualizar el catálogo sin tocar código.
 
 ---
 
-## 🧱 Stack
+## Diseño
 
-- **Frontend:** HTML, CSS y JavaScript _vanilla_ (sin build step).
-- **Animaciones:** [GSAP](https://gsap.com/) + ScrollTrigger (vía CDN).
-- **Backend / datos:** [Supabase](https://supabase.com/) — Postgres + Auth + Storage + Row Level Security.
-- **Hosting:** [Vercel](https://vercel.com/) (deploy automático al hacer push a `master`).
+El sitio sigue una filosofía de diseño editorial e industrial: tipografía grande con tracking negativo, espaciado generoso entre secciones, paleta reducida (negro, blanco, naranja EBTOOLS). Cada detalle apunta a que el usuario entienda qué es el negocio y cómo contactar en el menor tiempo posible.
 
----
-
-## 📁 Estructura
-
-```
-EBTOOLSWEB/
-├── index.html            # Home + catálogo
-├── producto.html         # Página de detalle de un producto
-├── panel.html            # Backoffice (acceso restringido)
-├── schema.sql            # Script completo de Supabase (tablas, RLS, datos, storage)
-├── assets/               # Logo, ícono, imágenes
-├── css/
-│   ├── styles.css        # Estilos del sitio público
-│   └── panel.css         # Estilos del backoffice
-└── js/
-    ├── config.js         # URL y anon key de Supabase (públicas por diseño)
-    ├── products-data.js  # Datos incluidos (fallback) de productos/categorías
-    ├── supabase-data.js  # Carga de datos en vivo desde Supabase
-    ├── main.js           # Lógica del home (catálogo, filtros, animaciones)
-    ├── producto.js       # Lógica de la página de producto
-    └── panel.js          # Lógica del backoffice (CRUD, imágenes, importación)
-```
+Algunos detalles de craft:
+- **Cards con elevación real** — sombra + borde naranja sutil al hover, la imagen escala levemente, el nombre del producto vira a naranja. El hover comunica "esto es clickeable" sin gritarlo.
+- **Sticky image en la página de producto** — mientras el usuario lee la descripción, la imagen del producto queda fija a la izquierda. Patrón clásico de e-commerce que hace la experiencia más cómoda.
+- **Watermark numbers en "Por qué elegirnos"** — números 01–02–03–04 en enorme detrás de cada card, visibles al hover. Detalle que sorprende pero se entiende de inmediato.
+- **Categorías con frosted glass** — las etiquetas de categoría sobre las fotos de producto usan `backdrop-filter: blur` para flotar limpiamente sobre cualquier imagen.
+- **Transiciones de página** — fade-out/fade-in entre páginas, scroll suave a secciones sin mostrar `#hash` en la URL.
+- **Press feedback** — todos los botones, filtros y cards escalan levemente al presionar (`scale(0.97)`). Feedback instantáneo que hace el sitio sentir responsivo.
+- **Videos en el carrusel** — los videos del producto (YouTube o archivo directo) se integran al carrusel de imágenes con un botón de play grande centrado, igual al patrón de YouTube. No hay sección separada de videos.
+- **Easings custom** — se usan curvas `cubic-bezier` propias en lugar de los easings nativos del navegador, que son demasiado suaves para sentir intencional.
 
 ---
 
-## 🗄️ Modelo de datos
+## Catálogo y filtros
 
-Tres tablas en Supabase (ver `schema.sql`):
-
-| Tabla           | Campos principales                                                        |
-|-----------------|--------------------------------------------------------------------------|
-| `categories`    | `key`, `label`, `icon` (SVG), `sort`                                      |
-| `subcategories` | `key`, `cat` (→ categoría), `label`, `sort`                               |
-| `products`      | `id`, `name`, `slug`, `cats[]`, `subcats[]`, `img`, `short`, `descr`, `sort`, `active` |
-
-`cats` y `subcats` son arrays (un producto puede estar en varias), con índices GIN para filtrar rápido.
-
-**Row Level Security:** lectura pública para todos; escritura solo para usuarios autenticados (el admin del backoffice).
+- Buscador en tiempo real por nombre o categoría
+- Filtros por categoría (primer nivel) y subcategoría (segundo nivel)
+- Cada producto puede pertenecer a múltiples categorías y subcategorías
+- Carrusel de imágenes + videos por producto
+- Página de detalle con descripción, imágenes, videos y productos relacionados
+- Sección de destacados en el hero de la landing, con orden configurable
 
 ---
 
-## 🚀 Puesta en marcha
+## Backoffice (`/panel.html`)
 
-### 1. Clonar y servir localmente
+Panel de administración con login, pensado para que cualquier persona del equipo pueda operar sin saber de desarrollo.
 
-Al ser estático, alcanza con cualquier servidor de archivos:
+**Productos**
+- Alta, edición y borrado de productos
+- Subida de imágenes por drag & drop o URL
+- Galería de imágenes adicionales y videos por producto
+- Descripción corta y completa (soporta saltos de línea)
+- Control de visibilidad (ocultar sin borrar)
+- Etiqueta de color configurable (EN OFERTA, NUEVO, etc.)
+- Avisos automáticos cuando un producto no tiene categoría o subcategoría asignada
 
-```bash
-git clone https://github.com/theotrosman/EBTOOLSWEB.git
-cd EBTOOLSWEB
+**Categorías y subcategorías**
+- Alta, edición y borrado
+- Selector visual de íconos (SVG) para cada categoría
+- Orden en el catálogo configurable (campo `sort`)
+- Búsqueda por nombre de categoría/subcategoría **o por nombre de producto** — escribís un producto y ves en qué categorías aparece
+- Filtro de subcategorías por categoría padre
 
-# con Node:
-npx serve .
-# o con Python:
-python -m http.server 3000
-```
-
-Abrir `http://localhost:3000`.
-
-### 2. Configurar Supabase
-
-1. Crear un proyecto en [supabase.com](https://supabase.com/).
-2. En **SQL Editor → New query**, pegar y ejecutar el contenido de `schema.sql`.
-   Esto crea las tablas, las políticas RLS, el bucket de Storage `product-images` y carga los 53 productos iniciales.
-   > ⚠️ El script empieza con un *reset* que borra y recrea las tablas: vuelve a dejar el catálogo inicial.
-3. Crear el **usuario admin** del backoffice en **Authentication → Users → Add user** (con _Auto Confirm_):
-   - el email que figura en `js/config.js` (`ADMIN_EMAIL`) y la contraseña que quieras.
-4. Poner la **URL** y la **anon/publishable key** del proyecto en `js/config.js`.
-
-### 3. Backoffice
-
-- Entrar a `/panel.html`, loguearse con el usuario admin y ya se pueden cargar productos, categorías e imágenes.
+**Destacados**
+- Selector para elegir qué productos aparecen en el carrusel del hero
+- Control del orden de aparición por número
 
 ---
 
-## 🔐 Sobre las claves
-
-La **anon key** (`sb_publishable_...`) es **pública por diseño**: solo permite lo que habilita RLS (en este proyecto, lectura para todos y escritura para usuarios logueados). Por eso es correcto versionarla en un sitio estático.
-
-> Nunca subir la `service_role` / `sb_secret_` al repositorio: esa clave saltea RLS.
-
----
-
-## 📦 Deploy
-
-El proyecto se sirve en **Vercel**. Cada `push` a `master` dispara un deploy automático. No hay paso de build: se publican los archivos tal cual.
-
----
-
-## 📞 Contacto
+## Contacto
 
 - **WhatsApp:** +54 9 11 7134-9389
 - **Instagram:** [@Ebtools](https://www.instagram.com/Ebtools)
