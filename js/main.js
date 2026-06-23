@@ -116,8 +116,14 @@ function initAccentRotation() {
 }
 
 /* ─── HERO PRODUCT ROTATION ─── */
+/* Idempotente: se puede llamar dos veces sin duplicar listeners ni intervals.
+   Esto permite hacer un primer render con datos bundleados (instantáneo) y
+   re-renderizar con datos frescos de Supabase cuando llegan, sin que aparezca
+   el producto hardcoded como "flash" intermedio. */
 let heroIdx = 0;
 let heroRotating = false;
+let heroInterval = null;
+let heroIds = [];
 
 function initHeroRotation() {
   const card   = document.querySelector('.hero-product-card');
@@ -126,15 +132,19 @@ function initHeroRotation() {
   const lcat   = card?.querySelector('.hero-product-label-cat');
   const badge  = document.getElementById('hero-badge');
   const dotsWrap = document.getElementById('hero-dots');
-  if (!card || !img) return;
+  if (!card || !img || !PRODUCTS.length) return;
 
-  // Build featured list from DB; fall back to first 6 products
-  const featuredList = PRODUCTS.filter(p => p.featured).sort((a, b) => a.featured_sort - b.featured_sort);
-  const HERO_IDS = featuredList.length ? featuredList.map(p => p.id) : PRODUCTS.slice(0, 6).map(p => p.id);
+  // Build featured list from DB; fall back to first 6 products by sort
+  const featuredList = PRODUCTS.filter(p => p.featured).sort((a, b) => (a.featured_sort||0) - (b.featured_sort||0));
+  heroIds = featuredList.length ? featuredList.map(p => p.id) : PRODUCTS.slice(0, 6).map(p => p.id);
+  heroIdx = 0;
+
+  // Clear interval previo si initHeroRotation se llama por segunda vez
+  if (heroInterval) { clearInterval(heroInterval); heroInterval = null; }
 
   // Render dots dynamically
   if (dotsWrap) {
-    dotsWrap.innerHTML = HERO_IDS.map((_, i) =>
+    dotsWrap.innerHTML = heroIds.map((_, i) =>
       `<button class="hero-dot ${i === 0 ? 'active' : ''}" aria-label="Producto ${i + 1}"></button>`
     ).join('');
   }
@@ -152,53 +162,59 @@ function initHeroRotation() {
     }
   }
 
+  function paint(p, animate) {
+    if (!p) return;
+    if (animate) {
+      gsap.timeline({ onComplete: () => { heroRotating = false; } })
+        .to(img, { opacity: 0, scale: 0.92, duration: 0.3, ease: 'power2.in' })
+        .call(() => {
+          img.src = p.img;
+          img.alt = p.name;
+          if (lname) lname.textContent = p.name;
+          if (lcat)  lcat.textContent  = getCatLabel(primaryCat(p));
+          updateBadge(p);
+        })
+        .to(img, { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' });
+    } else {
+      img.src = p.img;
+      img.alt = p.name;
+      img.style.opacity = '1';
+      if (lname) lname.textContent = p.name;
+      if (lcat)  lcat.textContent  = getCatLabel(primaryCat(p));
+      updateBadge(p);
+    }
+  }
+
   function goTo(idx) {
     if (heroRotating) return;
     heroRotating = true;
-
-    const p = PRODUCTS.find(p => p.id === HERO_IDS[idx]);
+    const p = PRODUCTS.find(p => p.id === heroIds[idx]);
     if (!p) { heroRotating = false; return; }
-
-    gsap.timeline({ onComplete: () => { heroRotating = false; } })
-      .to(img, { opacity: 0, scale: 0.92, duration: 0.3, ease: 'power2.in' })
-      .call(() => {
-        img.src = p.img;
-        img.alt = p.name;
-        if (lname) lname.textContent = p.name;
-        if (lcat)  lcat.textContent  = getCatLabel(primaryCat(p));
-        updateBadge(p);
-      })
-      .to(img, { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' });
-
+    paint(p, true);
     getDots().forEach((d, i) => d.classList.toggle('active', i === idx));
   }
 
-  // Render first featured product immediately so the hero shows the right
-  // content from the first frame (otherwise the hardcoded HTML stays visible
-  // until the first 4s interval tick, and the destacado #1 is skipped).
-  const firstP = PRODUCTS.find(p => p.id === HERO_IDS[0]);
-  if (firstP) {
-    img.src = firstP.img;
-    img.alt = firstP.name;
-    if (lname) lname.textContent = firstP.name;
-    if (lcat)  lcat.textContent  = getCatLabel(primaryCat(firstP));
-    updateBadge(firstP);
-  }
+  // Render del primer destacado SIN animación (instantáneo, para el primer paint).
+  paint(PRODUCTS.find(p => p.id === heroIds[0]), false);
 
-  // Dot clicks
+  // Dot clicks (re-bind seguro porque dotsWrap.innerHTML se reescribió arriba).
   getDots().forEach((d, i) => {
     d.addEventListener('click', () => { heroIdx = i; goTo(i); });
   });
 
-  // Click card → open product page
-  card.addEventListener('click', () => {
-    const p = PRODUCTS.find(p => p.id === HERO_IDS[heroIdx]);
-    if (p) window.location.href = `producto.html?id=${p.id}`;
-  });
+  // Card click → producto. Solo se bindea una vez para evitar dobles handlers
+  // si initHeroRotation se llama dos veces (bundle + Supabase).
+  if (!card.dataset.bound) {
+    card.addEventListener('click', () => {
+      const p = PRODUCTS.find(p => p.id === heroIds[heroIdx]);
+      if (p) window.location.href = `producto.html?id=${p.id}`;
+    });
+    card.dataset.bound = '1';
+  }
 
   // Auto-rotate
-  setInterval(() => {
-    heroIdx = (heroIdx + 1) % HERO_IDS.length;
+  heroInterval = setInterval(() => {
+    heroIdx = (heroIdx + 1) % heroIds.length;
     goTo(heroIdx);
   }, 4000);
 }
@@ -543,34 +559,46 @@ function initScrollTop() {
 }
 
 /* ─── INIT ─── */
-document.addEventListener('DOMContentLoaded', async () => {
-  initNavbar();
-  initTicker();
-
-  // Try live data from Supabase; falls back to bundled data on failure.
-  if (typeof loadDataFromSupabase === 'function') {
-    try { await loadDataFromSupabase(); } catch (e) { /* keep fallback */ }
-  }
-
+// Todo lo que depende de los datos. Se llama dos veces: una con el bundle
+// (instantáneo) y otra después de Supabase si trajo datos. Así nunca se ve
+// el hero hardcodeado mientras la DB responde.
+function renderAllDataDependent() {
   renderCategories();
   buildFilterPills();
   buildSubcatPills();
   renderProducts();
+  applyDynamicStats();
+  initHeroRotation();
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  initNavbar();
+  initTicker();
+
+  // 1) Primer paint con datos bundleados (instantáneo).
+  renderAllDataDependent();
   initSearch();
   initModal();
   initScrollTop();
-  applyDynamicStats();
   animateCounters();
   initScrollReveal();
 
-  // Hero sequences (slight delay for fonts/images).
-  // initHeroRotation() corre PRIMERO para que la card entre ya con el primer
-  // producto destacado (no con el HTML hardcodeado).
+  // Hero entrance + accent rotation (la rotación de productos ya arrancó
+  // dentro de initHeroRotation()).
   gsap.delayedCall(0.1, () => {
-    initHeroRotation();
     heroEntrance();
     initAccentRotation();
   });
+
+  // 2) En paralelo, traemos Supabase. Si vino con datos, re-renderizamos
+  //    todo lo que depende de los datos (incluido el hero rotation, que
+  //    ahora es idempotente).
+  if (typeof loadDataFromSupabase === 'function') {
+    try {
+      const ok = await loadDataFromSupabase();
+      if (ok) renderAllDataDependent();
+    } catch (e) { /* keep fallback */ }
+  }
 });
 
 // Recalcular posiciones de ScrollTrigger después de que carguen las imágenes.

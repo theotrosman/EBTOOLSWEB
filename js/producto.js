@@ -191,21 +191,52 @@ function renderVideos(product) {
   const grid    = document.getElementById('videos-grid');
   if (!section || !grid) return;
   section.style.display = '';
-  grid.innerHTML = videos.map(url => {
+
+  // Render: thumbnail con play overlay. El embed real recién se carga al
+  // hacer click (lazy) — más liviano y mejor visualmente que un iframe vacío.
+  const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><polygon points="6 4 20 12 6 20"/></svg>`;
+  grid.innerHTML = videos.map((url, i) => {
     const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) {
-      return `<div class="video-embed-wrap">
-        <iframe src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-        </iframe>
-      </div>`;
+      const ytId = ytMatch[1];
+      return `<button type="button" class="video-thumb" data-yt="${ytId}" aria-label="Reproducir video ${i + 1}">
+        <img class="video-poster" src="https://i.ytimg.com/vi/${ytId}/hqdefault.jpg"
+             alt="Reproducir video del producto" loading="lazy"
+             onerror="this.src='https://i.ytimg.com/vi/${ytId}/mqdefault.jpg'">
+        <span class="video-overlay"></span>
+        <span class="video-play">${PLAY_SVG}</span>
+        <span class="video-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M21.582 6.186a2.506 2.506 0 0 0-1.768-1.768C18.254 4 12 4 12 4s-6.254 0-7.814.418a2.506 2.506 0 0 0-1.768 1.768C2 7.746 2 12 2 12s0 4.254.418 5.814a2.506 2.506 0 0 0 1.768 1.768C5.746 20 12 20 12 20s6.254 0 7.814-.418a2.506 2.506 0 0 0 1.768-1.768C22 16.254 22 12 22 12s0-4.254-.418-5.814zM10 15.5v-7l6 3.5-6 3.5z"/></svg>
+          YouTube
+        </span>
+      </button>`;
     }
-    return `<a href="${url}" target="_blank" rel="noopener" class="video-link-card">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="22" height="22"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Ver video
+    // Video genérico (no YouTube): card visual con play centrado.
+    return `<a href="${escAttr(url)}" target="_blank" rel="noopener" class="video-thumb video-thumb--ext">
+      <span class="video-play">${PLAY_SVG}</span>
+      <span class="video-ext-label">
+        <span class="video-ext-label-title">Ver video</span>
+        <span class="video-ext-label-sub">Se abre en una nueva pestaña</span>
+      </span>
     </a>`;
   }).join('');
+
+  // Lazy embed: al hacer click reemplazamos el thumbnail por el iframe real
+  // con autoplay (el browser lo permite porque el click es un gesto del user).
+  grid.querySelectorAll('.video-thumb[data-yt]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.yt;
+      const wrap = document.createElement('div');
+      wrap.className = 'video-embed-wrap';
+      wrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0"
+        title="Video del producto"
+        frameborder="0" allowfullscreen
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+      btn.replaceWith(wrap);
+    });
+  });
 }
+
 
 function renderRelated(product) {
   const related = getRelated(product, 12);
