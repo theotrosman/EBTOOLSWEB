@@ -558,6 +558,24 @@ function initModal() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalOpen) closeModal(); });
 }
 
+/* ─── ANCHOR SCROLL SIN HASH EN URL ─── */
+/* Links href="#seccion" → scroll suave al destino, URL queda limpia (sin #hash). */
+function initAnchorScroll() {
+  const NAVBAR_H = 68;
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const hash = a.getAttribute('href');
+    if (!hash || hash === '#') return;
+    const target = document.querySelector(hash);
+    if (!target) return;
+    e.preventDefault();
+    const top = target.getBoundingClientRect().top + window.scrollY - NAVBAR_H;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    history.replaceState(null, '', location.pathname);
+  });
+}
+
 /* ─── PAGE TRANSITIONS ─── */
 /* Fade out antes de navegar a una página interna. El fade-in lo maneja
    la animación CSS `eb-page-in` definida en styles.css. */
@@ -605,6 +623,7 @@ function renderAllDataDependent() {
 document.addEventListener('DOMContentLoaded', async () => {
   initNavbar();
   initTicker();
+  initAnchorScroll();
   initPageTransitions();
 
   // 1) Primer paint con datos bundleados (instantáneo).
