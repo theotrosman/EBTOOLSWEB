@@ -1327,10 +1327,15 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
 /* Direct video file slide */
 .carousel-slide--vid {
   padding: 0 !important; background: var(--black); overflow: hidden;
+  position: relative; cursor: pointer;
 }
+.carousel-slide--vid.playing { cursor: default; }
 .carousel-slide--vid video {
   width: 100%; height: 100%; max-height: 100%; object-fit: contain;
   display: block;
+}
+@media (hover: hover) and (pointer: fine) {
+  .carousel-slide--vid:not(.playing):hover .slide-play-btn { transform: translate(-50%,-50%) scale(1.1); }
 }
 /* Thumbnail with play indicator */
 .gallery-thumb--yt,

@@ -91,8 +91,9 @@ function buildSlideHtml(item, i, productName) {
   }
   if (item.type === 'vid') {
     return `<div class="carousel-slide carousel-slide--vid" data-idx="${i}">
-      <video src="${escAttr(item.url)}" controls playsinline preload="metadata"
+      <video src="${escAttr(item.url)}" playsinline preload="metadata"
              onerror="this.parentElement.style.display='none'"></video>
+      <div class="slide-play-btn">${PLAY_SVG_LG}</div>
     </div>`;
   }
   // img
@@ -157,6 +158,29 @@ function initCarousel(product) {
       slide.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0"
         title="Video del producto" frameborder="0" allowfullscreen
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+    });
+  });
+
+  // Video directo click-to-play — igual que YT: botón grande centrado, click activa controles nativos
+  trackEl.querySelectorAll('.carousel-slide--vid').forEach(slide => {
+    const video = slide.querySelector('video');
+    const playBtn = slide.querySelector('.slide-play-btn');
+    if (!video || !playBtn) return;
+
+    slide.addEventListener('click', () => {
+      if (slide.classList.contains('playing')) return;
+      video.controls = true;
+      playBtn.style.display = 'none';
+      slide.classList.add('playing');
+      video.play();
+    });
+
+    // Al terminar el video: vuelve al estado inicial con el botón grande
+    video.addEventListener('ended', () => {
+      slide.classList.remove('playing');
+      video.controls = false;
+      video.currentTime = 0;
+      playBtn.style.display = '';
     });
   });
 
