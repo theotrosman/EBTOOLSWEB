@@ -76,6 +76,9 @@
         <h2>Categorías</h2>
         <button class="btn-primary" id="new-cat-btn">+ Nueva categoría</button>
       </div>
+      <div class="filter-bar">
+        <input type="text" id="cat-search" class="admin-search" placeholder="Buscar categoría o producto...">
+      </div>
       <div id="cats-table" class="data-table"></div>
     </section>
 
@@ -83,6 +86,15 @@
       <div class="panel-head">
         <h2>Subcategorías</h2>
         <button class="btn-primary" id="new-subcat-btn">+ Nueva subcategoría</button>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="subcat-search" class="admin-search" placeholder="Buscar subcategoría o producto...">
+        <label class="filter-bar-select">
+          <span>Categoría</span>
+          <select id="subcat-cat-filter">
+            <option value="">Todas</option>
+          </select>
+        </label>
       </div>
       <div id="subcats-table" class="data-table"></div>
     </section>

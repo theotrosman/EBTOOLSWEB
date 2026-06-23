@@ -263,3 +263,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
 .feat-check-text{font-size:.82rem;font-weight:700;color:var(--g700)}
 .feat-order{width:64px;border:1px solid var(--g300);border-radius:6px;padding:6px 8px;font-size:.85rem;text-align:center;font-family:var(--font);flex-shrink:0;background:#fff}
 .feat-order:focus{outline:none;border-color:var(--orange)}
+
+/* ORDEN EN EL CATÁLOGO — badge numérico en filas de cat / subcat */
+.sort-badge{
+  width:28px;height:28px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--g100);border:1px solid var(--g200);border-radius:7px;
+  font-size:.72rem;font-weight:800;color:var(--g500);
+  cursor:default;user-select:none;
+}
+
+/* AVISOS DE DATOS FALTANTES EN PRODUCTOS */
+.tag.warn{background:#fff3e9;border-color:#f8c89e;color:#a8500c;font-weight:700}
+.tag.warn-sub{background:#fef9ec;border-color:#f5e19a;color:#856a00}

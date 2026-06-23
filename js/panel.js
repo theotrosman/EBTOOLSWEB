@@ -4,7 +4,7 @@ const CONFIGURED = CFG.SUPABASE_URL && !CFG.SUPABASE_URL.includes('__SUPABASE_UR
   CFG.SUPABASE_ANON_KEY && !CFG.SUPABASE_ANON_KEY.includes('__SUPABASE_ANON_KEY__');
 
 let sb = null;
-const state = { cats: [], subcats: [], products: [], psearch: '', psort: 'recent' };
+const state = { cats: [], subcats: [], products: [], psearch: '', psort: 'recent', catsearch: '', scsearch: '', sccat: '' };
 
 // Devuelve "hace 3 min", "ayer", "12 abr", etc. para mostrar al lado de cada fila.
 function relativeTime(iso) {
@@ -131,6 +131,7 @@ async function loadAll() {
   state.subcats = s.data || [];
   state.products = p.data || [];
   _featChanged.clear();
+  populateSubcatCatFilter();
   renderProducts();
   renderCats();
   renderSubcats();
@@ -192,6 +193,8 @@ function renderProducts() {
         <div class="row-meta">
           ${pcats(p).map(c => `<span class="tag">${esc(catLabel(c))}</span>`).join('')}
           ${psubs(p).map(s => `<span class="tag tag-sub">${esc(subLabel(s))}</span>`).join('')}
+          ${pcats(p).length === 0 ? '<span class="tag warn">&#9888; Sin categoría</span>' : ''}
+          ${psubs(p).length === 0 ? '<span class="tag warn-sub">Sin subcategoría</span>' : ''}
           ${p.active ? '' : '<span class="tag off">Oculto</span>'}
         </div>
       </div>
@@ -206,11 +209,21 @@ function renderProducts() {
 /* ---------- RENDER: CATEGORIES ---------- */
 function renderCats() {
   const wrap = $('cats-table');
-  if (!state.cats.length) { wrap.innerHTML = '<div class="empty">Sin categorías.</div>'; return; }
-  wrap.innerHTML = state.cats.map(c => {
+  const q = state.catsearch.trim().toLowerCase();
+  let list = [...state.cats];
+  if (q) {
+    list = list.filter(c => {
+      if (c.label.toLowerCase().includes(q)) return true;
+      // También muestra la categoría si algún producto suyo coincide con la búsqueda
+      return state.products.some(p => pcats(p).includes(c.key) && p.name.toLowerCase().includes(q));
+    });
+  }
+  if (!list.length) { wrap.innerHTML = '<div class="empty">Sin categorías que coincidan.</div>'; return; }
+  wrap.innerHTML = list.map(c => {
     const n = state.products.filter(p => pcats(p).includes(c.key)).length;
     return `
     <div class="row">
+      <div class="sort-badge" title="Orden en el catálogo (editá para cambiar)">${c.sort ?? 0}</div>
       <div class="row-icon">${c.icon || ''}</div>
       <div class="row-main">
         <div class="row-title">${esc(c.label)}</div>
@@ -300,13 +313,34 @@ async function saveFeatured() {
 }
 
 /* ---------- RENDER: SUBCATEGORIES ---------- */
+// Rellena el <select> de filtro por categoría con las categorías actuales.
+function populateSubcatCatFilter() {
+  const sel = $('subcat-cat-filter');
+  if (!sel) return;
+  const cur = state.sccat;
+  sel.innerHTML = `<option value="">Todas</option>` +
+    state.cats.map(c => `<option value="${esc(c.key)}"${c.key === cur ? ' selected' : ''}>${esc(c.label)}</option>`).join('');
+}
+
 function renderSubcats() {
   const wrap = $('subcats-table');
-  if (!state.subcats.length) { wrap.innerHTML = '<div class="empty">Sin subcategorías.</div>'; return; }
-  wrap.innerHTML = state.subcats.map(s => {
+  const q = state.scsearch.trim().toLowerCase();
+  const catFilter = state.sccat;
+  let list = [...state.subcats];
+  if (catFilter) list = list.filter(s => s.cat === catFilter);
+  if (q) {
+    list = list.filter(s => {
+      if (s.label.toLowerCase().includes(q)) return true;
+      // Busca también por nombre de producto: muestra subcats que tengan ese producto
+      return state.products.some(p => psubs(p).includes(s.key) && p.name.toLowerCase().includes(q));
+    });
+  }
+  if (!list.length) { wrap.innerHTML = '<div class="empty">Sin subcategorías que coincidan.</div>'; return; }
+  wrap.innerHTML = list.map(s => {
     const n = state.products.filter(p => psubs(p).includes(s.key)).length;
     return `
     <div class="row">
+      <div class="sort-badge" title="Orden en el catálogo (editá para cambiar)">${s.sort ?? 0}</div>
       <div class="row-main">
         <div class="row-title">${esc(s.label)}</div>
         <div class="row-meta"><span class="tag">${esc(catLabel(s.cat))}</span> ${n} producto${n === 1 ? '' : 's'}</div>
@@ -786,6 +820,7 @@ function catForm(c, isNew) {
 
   return `
     ${fieldText('label','Nombre de la categoría', c?.label || '')}
+    ${fieldText('sort','Orden en el catálogo (menor = primero)', String(c?.sort ?? ''), 'number')}
     <div class="field"><span>Ícono</span>
       <div class="check-hint">Tocá uno para elegirlo.</div>
       <div class="icon-picker">${choices}</div>
@@ -894,7 +929,8 @@ function editCat(key) {
     const label = formVal('label').trim();
     if (!label) { $('modal-msg').textContent = 'Escribí el nombre de la categoría.'; return; }
     const icon = formVal('iconCustom').trim() || formVal('icon').trim() || c.icon || DEFAULT_CAT_ICON;
-    const { error } = await sb.from('categories').update({ label, icon }).eq('key', key);
+    const sort = parseInt(formVal('sort') || '0', 10);
+    const { error } = await sb.from('categories').update({ label, icon, sort }).eq('key', key);
     if (error) { afterSave(error, ''); return; }
     const diff = await applyProductAssignments('cats', key);
     if (diff.errors.length) {
@@ -958,6 +994,7 @@ function subcatForm(s, isNew) {
   return `
     ${fieldSelect('cat','¿A qué categoría pertenece?', catOptions(), s?.cat || state.cats[0]?.key || '')}
     ${fieldText('label','Nombre de la subcategoría', s?.label || '')}
+    ${fieldText('sort','Orden en el catálogo (menor = primero)', String(s?.sort ?? ''), 'number')}
     ${productsPicker}`;
 }
 function newSubcat() {
@@ -978,7 +1015,8 @@ function editSubcat(key) {
   openModal('Editar subcategoría', subcatForm(s, false), async () => {
     const label = formVal('label').trim();
     if (!label) { $('modal-msg').textContent = 'Escribí el nombre de la subcategoría.'; return; }
-    const { error } = await sb.from('subcategories').update({ cat: formVal('cat'), label }).eq('key', key);
+    const sort = parseInt(formVal('sort') || '0', 10);
+    const { error } = await sb.from('subcategories').update({ cat: formVal('cat'), label, sort }).eq('key', key);
     if (error) { afterSave(error, ''); return; }
     const diff = await applyProductAssignments('subcats', key);
     if (diff.errors.length) {
@@ -1035,6 +1073,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('product-search').addEventListener('input', e => { state.psearch = e.target.value; renderProducts(); });
   $('product-sort')?.addEventListener('change', e => { state.psort = e.target.value; renderProducts(); });
+  $('cat-search')?.addEventListener('input', e => { state.catsearch = e.target.value; renderCats(); });
+  $('subcat-search')?.addEventListener('input', e => { state.scsearch = e.target.value; renderSubcats(); });
+  $('subcat-cat-filter')?.addEventListener('change', e => { state.sccat = e.target.value; renderSubcats(); });
   $('featured-search')?.addEventListener('input', renderFeatured);
   $('save-featured-btn')?.addEventListener('click', saveFeatured);
   $('new-product-btn').addEventListener('click', newProduct);
