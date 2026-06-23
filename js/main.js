@@ -3,6 +3,15 @@
 
 gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
+/* ─── TEXT FORMATTING ─── */
+/* Preserva saltos de línea del editor en la descripción del producto.
+   Escapa HTML para evitar XSS y convierte \n en <br>. */
+function descToHtml(text) {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
 /* ─── BADGE COLOR MAP ─── */
 const BADGE_COLORS = {
   green: '#22c55e', red: '#ef4444', yellow: '#f59e0b',
@@ -418,7 +427,7 @@ function renderProducts() {
         <div class="product-name">${p.name}</div>
         <div class="product-short">${p.short}</div>
         <a href="${waMsg(p.name)}" target="_blank" rel="noopener" class="btn-card-wa" onclick="event.stopPropagation()">
-          ${WA_SVG} Consultar precio
+          ${WA_SVG} Consultar por WhatsApp
         </a>
       </div>
     </div>`).join('');
@@ -518,7 +527,7 @@ function openModal(id) {
   document.getElementById('modal-img').alt          = p.name;
   document.getElementById('modal-tag').textContent  = productCatLabels(p).join(' · ');
   document.getElementById('modal-name').textContent = p.name;
-  document.getElementById('modal-desc').textContent = p.desc;
+  document.getElementById('modal-desc').innerHTML = descToHtml(p.desc);
   document.getElementById('modal-wa-btn').href      = waMsg(p.name);
   document.getElementById('modal-page-btn').href    = `producto.html?id=${p.id}`;
 
@@ -549,6 +558,28 @@ function initModal() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalOpen) closeModal(); });
 }
 
+/* ─── PAGE TRANSITIONS ─── */
+/* Fade out antes de navegar a una página interna. El fade-in lo maneja
+   la animación CSS `eb-page-in` definida en styles.css. */
+function initPageTransitions() {
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href) return;
+    // Saltar: nueva pestaña, anchors, mailto/tel, URLs externas
+    if (a.target === '_blank') return;
+    if (href.startsWith('#')) return;
+    if (/^(https?:|mailto:|tel:|javascript)/.test(href)) return;
+    e.preventDefault();
+    const dest = href;
+    gsap.to(document.body, {
+      opacity: 0, duration: 0.18, ease: 'power2.in',
+      onComplete() { window.location.href = dest; }
+    });
+  });
+}
+
 /* ─── SCROLL TO TOP ─── */
 function initScrollTop() {
   const btn = document.getElementById('scroll-top');
@@ -574,6 +605,7 @@ function renderAllDataDependent() {
 document.addEventListener('DOMContentLoaded', async () => {
   initNavbar();
   initTicker();
+  initPageTransitions();
 
   // 1) Primer paint con datos bundleados (instantáneo).
   renderAllDataDependent();

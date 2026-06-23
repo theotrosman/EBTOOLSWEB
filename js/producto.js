@@ -1,6 +1,13 @@
 /* ===== EBTOOLS — PRODUCT PAGE JS ===== */
 gsap.registerPlugin(ScrollTrigger);
 
+/* ─── TEXT FORMATTING ─── */
+function descToHtml(text) {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
 function initNavbar() {
   const navbar = document.querySelector('.navbar');
   const toggle = document.getElementById('nav-toggle');
@@ -39,7 +46,7 @@ function renderProduct() {
 
   document.getElementById('product-cat').textContent  = productCatLabels(product).join(' · ');
   document.getElementById('product-name').textContent = product.name;
-  document.getElementById('product-desc').textContent = product.desc;
+  document.getElementById('product-desc').innerHTML = descToHtml(product.desc);
 
   // WhatsApp links
   const waLink = waMsg(product.name);
@@ -47,18 +54,72 @@ function renderProduct() {
   document.getElementById('wa-float-link').href  = waLink;
   document.getElementById('cta-wa-btn').href     = waLink;
 
-  // Carrusel + thumbnails
+  // Carrusel: fotos + videos integrados en el mismo carrete
   initCarousel(product);
-
-  // Videos
-  renderVideos(product);
 
   // Related
   renderRelated(product);
 }
 
-/* ========== CAROUSEL ========== */
-const CAROUSEL = { images: [], index: 0, animating: false };
+/* ========== CAROUSEL (fotos + videos integrados) ========== */
+const CAROUSEL = { items: [], index: 0 };
+
+/* Parsea una URL de video para saber qué tipo es:
+   - YouTube: { type: 'yt', id, url }
+   - Archivo de video directo (.mp4/.webm/.mov/etc.): { type: 'vid', url }
+   - Imagen:  { type: 'img', url } */
+function parseMediaItem(url) {
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return { type: 'yt', id: ytMatch[1], url };
+  if (/\.(mp4|webm|mov|avi|mkv|ogv)(\?|$)/i.test(url)) return { type: 'vid', url };
+  return { type: 'img', url };
+}
+
+const PLAY_SVG_LG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><polygon points="6 4 20 12 6 20"/></svg>`;
+const PLAY_SVG_SM = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><polygon points="6 4 20 12 6 20"/></svg>`;
+const YT_BADGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M21.582 6.186a2.506 2.506 0 0 0-1.768-1.768C18.254 4 12 4 12 4s-6.254 0-7.814.418a2.506 2.506 0 0 0-1.768 1.768C2 7.746 2 12 2 12s0 4.254.418 5.814a2.506 2.506 0 0 0 1.768 1.768C5.746 20 12 20 12 20s6.254 0 7.814-.418a2.506 2.506 0 0 0 1.768-1.768C22 16.254 22 12 22 12s0-4.254-.418-5.814zM10 15.5v-7l6 3.5-6 3.5z"/></svg>`;
+
+function buildSlideHtml(item, i, productName) {
+  if (item.type === 'yt') {
+    const poster = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
+    return `<div class="carousel-slide carousel-slide--yt" data-idx="${i}" data-yt="${escAttr(item.id)}">
+      <img src="${escAttr(poster)}" alt="Video ${i + 1} — ${escAttr(productName)}" loading="lazy"
+           onerror="this.src='https://i.ytimg.com/vi/${escAttr(item.id)}/mqdefault.jpg'">
+      <div class="slide-play-btn">${PLAY_SVG_LG}</div>
+      <span class="slide-yt-badge">${YT_BADGE_SVG} YouTube</span>
+    </div>`;
+  }
+  if (item.type === 'vid') {
+    return `<div class="carousel-slide carousel-slide--vid" data-idx="${i}">
+      <video src="${escAttr(item.url)}" controls playsinline preload="metadata"
+             onerror="this.parentElement.style.display='none'"></video>
+    </div>`;
+  }
+  // img
+  return `<div class="carousel-slide" data-idx="${i}">
+    <img src="${escAttr(item.url)}" alt="${escAttr(productName)} — imagen ${i + 1}"
+         loading="${i === 0 ? 'eager' : 'lazy'}"
+         onerror="this.style.opacity='0'">
+  </div>`;
+}
+
+function buildThumbHtml(item, i) {
+  if (item.type === 'yt') {
+    const poster = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
+    return `<button class="gallery-thumb gallery-thumb--yt ${i === 0 ? 'active' : ''}" data-go="${i}" aria-label="Video ${i + 1}">
+      <img src="${escAttr(poster)}" alt="" loading="lazy">
+      <span class="thumb-play-icon">${PLAY_SVG_SM}</span>
+    </button>`;
+  }
+  if (item.type === 'vid') {
+    return `<button class="gallery-thumb gallery-thumb--vid ${i === 0 ? 'active' : ''}" data-go="${i}" aria-label="Video ${i + 1}">
+      <span class="thumb-play-icon">${PLAY_SVG_SM}</span>
+    </button>`;
+  }
+  return `<button class="gallery-thumb ${i === 0 ? 'active' : ''}" data-go="${i}" aria-label="Imagen ${i + 1}">
+    <img src="${escAttr(item.url)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'">
+  </button>`;
+}
 
 function initCarousel(product) {
   const wrapEl   = document.getElementById('carousel');
@@ -70,44 +131,54 @@ function initCarousel(product) {
   const nextBtn  = document.getElementById('carousel-next');
   if (!wrapEl || !trackEl) return;
 
-  const images = [product.img, ...(product.images || [])]
-    .filter(url => url && url.trim());
-  CAROUSEL.images = images;
+  // Construir lista de media: primero fotos, luego videos
+  const imgUrls = [product.img, ...(product.images || [])].filter(u => u && u.trim());
+  const vidUrls = (product.videos || []).filter(u => u && u.trim());
+  const items   = [...imgUrls.map(parseMediaItem), ...vidUrls.map(parseMediaItem)];
+
+  CAROUSEL.items = items;
   CAROUSEL.index = 0;
 
-  if (!images.length) { wrapEl.style.display = 'none'; return; }
+  if (!items.length) { wrapEl.style.display = 'none'; return; }
+
+  // Ocultar sección de videos separada (están integrados en el carrusel)
+  const vidSection = document.getElementById('videos-section');
+  if (vidSection) vidSection.style.display = 'none';
 
   // Slides
-  trackEl.innerHTML = images.map((url, i) => `
-    <div class="carousel-slide" data-idx="${i}">
-      <img src="${escAttr(url)}" alt="${escAttr(product.name)} — imagen ${i + 1}"
-           loading="${i === 0 ? 'eager' : 'lazy'}"
-           onerror="this.style.opacity='0'">
-    </div>
-  `).join('');
+  trackEl.innerHTML = items.map((item, i) => buildSlideHtml(item, i, product.name)).join('');
 
-  // Dots + thumbs solo si hay más de 1 imagen
-  const showNav = images.length > 1;
+  // YT click-to-play dentro del slide
+  trackEl.querySelectorAll('.carousel-slide--yt').forEach(slide => {
+    slide.addEventListener('click', () => {
+      if (slide.classList.contains('playing')) return;
+      const id = slide.dataset.yt;
+      slide.classList.add('playing');
+      slide.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0"
+        title="Video del producto" frameborder="0" allowfullscreen
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+    });
+  });
+
+  // Dots + thumbs solo si hay más de 1 item
+  const showNav = items.length > 1;
   wrapEl.classList.toggle('has-multiple', showNav);
 
   if (dotsEl) {
     dotsEl.innerHTML = showNav
-      ? images.map((_, i) =>
-          `<button class="carousel-dot ${i === 0 ? 'active' : ''}" data-go="${i}" aria-label="Imagen ${i + 1}"></button>`
+      ? items.map((_, i) =>
+          `<button class="carousel-dot ${i === 0 ? 'active' : ''}" data-go="${i}" aria-label="Ítem ${i + 1}"></button>`
         ).join('')
       : '';
   }
 
   if (thumbsEl) {
     thumbsEl.innerHTML = showNav
-      ? images.map((url, i) =>
-          `<button class="gallery-thumb ${i === 0 ? 'active' : ''}" data-go="${i}" aria-label="Imagen ${i + 1}">
-            <img src="${escAttr(url)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'">
-          </button>`).join('')
+      ? items.map((item, i) => buildThumbHtml(item, i)).join('')
       : '';
   }
 
-  if (counterEl) counterEl.textContent = `1 / ${images.length}`;
+  if (counterEl) counterEl.textContent = `1 / ${items.length}`;
   if (counterEl) counterEl.style.display = showNav ? '' : 'none';
 
   // Listeners
@@ -122,7 +193,7 @@ function initCarousel(product) {
     if (b) goCarouselTo(Number(b.dataset.go));
   });
 
-  // Teclado (← →) cuando el carrusel está en pantalla
+  // Teclado (← →)
   document.addEventListener('keydown', e => {
     if (!showNav) return;
     if (e.target.matches('input, textarea, select')) return;
@@ -133,7 +204,7 @@ function initCarousel(product) {
   // Swipe en mobile
   bindCarouselSwipe(trackEl);
 
-  goCarouselTo(0); // posiciona el track sin animar
+  goCarouselTo(0);
 }
 
 function escAttr(s) {
@@ -141,8 +212,8 @@ function escAttr(s) {
 }
 
 function goCarousel(delta) {
-  if (!CAROUSEL.images.length) return;
-  const next = (CAROUSEL.index + delta + CAROUSEL.images.length) % CAROUSEL.images.length;
+  if (!CAROUSEL.items.length) return;
+  const next = (CAROUSEL.index + delta + CAROUSEL.items.length) % CAROUSEL.items.length;
   goCarouselTo(next);
 }
 
@@ -152,7 +223,7 @@ function goCarouselTo(idx) {
   if (!trackEl) return;
   CAROUSEL.index = idx;
   trackEl.style.transform = `translateX(-${idx * 100}%)`;
-  if (counter) counter.textContent = `${idx + 1} / ${CAROUSEL.images.length}`;
+  if (counter) counter.textContent = `${idx + 1} / ${CAROUSEL.items.length}`;
   document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
   document.querySelectorAll('.gallery-thumb').forEach((d, i) => d.classList.toggle('active', i === idx));
   // Auto-scroll del thumb activo dentro del contenedor de thumbs (sin afectar
@@ -181,59 +252,6 @@ function bindCarouselSwipe(el) {
     if (!dragging) return;
     dragging = false;
     if (Math.abs(dx) > 40) goCarousel(dx < 0 ? +1 : -1);
-  });
-}
-
-function renderVideos(product) {
-  const videos = product.videos || [];
-  if (!videos.length) return;
-  const section = document.getElementById('videos-section');
-  const grid    = document.getElementById('videos-grid');
-  if (!section || !grid) return;
-  section.style.display = '';
-
-  // Render: thumbnail con play overlay. El embed real recién se carga al
-  // hacer click (lazy) — más liviano y mejor visualmente que un iframe vacío.
-  const PLAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><polygon points="6 4 20 12 6 20"/></svg>`;
-  grid.innerHTML = videos.map((url, i) => {
-    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-    if (ytMatch) {
-      const ytId = ytMatch[1];
-      return `<button type="button" class="video-thumb" data-yt="${ytId}" aria-label="Reproducir video ${i + 1}">
-        <img class="video-poster" src="https://i.ytimg.com/vi/${ytId}/hqdefault.jpg"
-             alt="Reproducir video del producto" loading="lazy"
-             onerror="this.src='https://i.ytimg.com/vi/${ytId}/mqdefault.jpg'">
-        <span class="video-overlay"></span>
-        <span class="video-play">${PLAY_SVG}</span>
-        <span class="video-badge">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M21.582 6.186a2.506 2.506 0 0 0-1.768-1.768C18.254 4 12 4 12 4s-6.254 0-7.814.418a2.506 2.506 0 0 0-1.768 1.768C2 7.746 2 12 2 12s0 4.254.418 5.814a2.506 2.506 0 0 0 1.768 1.768C5.746 20 12 20 12 20s6.254 0 7.814-.418a2.506 2.506 0 0 0 1.768-1.768C22 16.254 22 12 22 12s0-4.254-.418-5.814zM10 15.5v-7l6 3.5-6 3.5z"/></svg>
-          YouTube
-        </span>
-      </button>`;
-    }
-    // Video genérico (no YouTube): card visual con play centrado.
-    return `<a href="${escAttr(url)}" target="_blank" rel="noopener" class="video-thumb video-thumb--ext">
-      <span class="video-play">${PLAY_SVG}</span>
-      <span class="video-ext-label">
-        <span class="video-ext-label-title">Ver video</span>
-        <span class="video-ext-label-sub">Se abre en una nueva pestaña</span>
-      </span>
-    </a>`;
-  }).join('');
-
-  // Lazy embed: al hacer click reemplazamos el thumbnail por el iframe real
-  // con autoplay (el browser lo permite porque el click es un gesto del user).
-  grid.querySelectorAll('.video-thumb[data-yt]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.yt;
-      const wrap = document.createElement('div');
-      wrap.className = 'video-embed-wrap';
-      wrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0"
-        title="Video del producto"
-        frameborder="0" allowfullscreen
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
-      btn.replaceWith(wrap);
-    });
   });
 }
 
@@ -309,8 +327,27 @@ function initAnimations() {
   });
 }
 
+function initPageTransitions() {
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href) return;
+    if (a.target === '_blank') return;
+    if (href.startsWith('#')) return;
+    if (/^(https?:|mailto:|tel:|javascript)/.test(href)) return;
+    e.preventDefault();
+    const dest = href;
+    gsap.to(document.body, {
+      opacity: 0, duration: 0.18, ease: 'power2.in',
+      onComplete() { window.location.href = dest; }
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   initNavbar();
+  initPageTransitions();
   if (typeof loadDataFromSupabase === 'function') {
     try { await loadDataFromSupabase(); } catch (e) { /* keep fallback */ }
   }
