@@ -388,6 +388,15 @@ function getFiltered() {
       productCatLabels(p).join(' ').toLowerCase().includes(q)
     );
   }
+  // Catalog-pinned products always appear first (sorted by catalog_order).
+  // Non-pinned products follow in their default Supabase sort order.
+  const hasPinned = list.some(p => p.catalog_pinned);
+  if (hasPinned) {
+    list = [
+      ...list.filter(p => p.catalog_pinned).sort((a, b) => (a.catalog_order || 0) - (b.catalog_order || 0)),
+      ...list.filter(p => !p.catalog_pinned),
+    ];
+  }
   return list;
 }
 

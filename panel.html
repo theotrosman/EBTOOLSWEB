@@ -45,6 +45,7 @@
     <button class="tab" data-tab="categorias">Categorías</button>
     <button class="tab" data-tab="subcategorias">Subcategorías</button>
     <button class="tab" data-tab="destacados">Destacados</button>
+    <button class="tab" data-tab="catalogo">Catálogo</button>
   </nav>
 
   <main class="admin-main">
@@ -110,6 +111,19 @@
       </p>
       <input type="text" id="featured-search" class="admin-search" placeholder="Buscar producto...">
       <div id="featured-table" class="data-table"></div>
+    </section>
+
+    <section id="tab-catalogo" class="tab-panel">
+      <div class="panel-head">
+        <h2>Primeros en el catálogo</h2>
+        <button class="btn-primary" id="save-catalog-btn">Guardar cambios</button>
+      </div>
+      <p class="check-hint" style="margin-bottom:14px">
+        Elegí qué productos aparecen <strong>al abrir el catálogo</strong>, antes de que el visitante toque "Ver más".<br>
+        Tildá <strong>"Primero en catálogo"</strong> y escribí el <strong>número de orden</strong> (1 = primero).
+      </p>
+      <input type="text" id="catalog-search" class="admin-search" placeholder="Buscar producto...">
+      <div id="catalog-table" class="data-table"></div>
     </section>
   </main>
 </div>

@@ -37,7 +37,8 @@ function fullTimestamp(iso) {
     hour: '2-digit', minute: '2-digit'
   });
 }
-const _featChanged = new Set(); // IDs whose featured/featured_sort changed in the Destacados picker
+const _featChanged    = new Set(); // IDs whose featured/featured_sort changed in the Destacados picker
+const _catalogChanged = new Set(); // IDs whose catalog_pinned/catalog_order changed in the Catálogo picker
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
@@ -131,6 +132,7 @@ async function loadAll() {
   state.subcats = s.data || [];
   state.products = p.data || [];
   _featChanged.clear();
+  _catalogChanged.clear();
   populateSubcatCatFilter();
   renderProducts();
   renderCats();
@@ -310,6 +312,81 @@ async function saveFeatured() {
   _featChanged.clear();
   toast(`${toUpdate.length} producto(s) actualizado(s)`);
   renderFeatured();
+}
+
+/* ---------- RENDER: CATALOG PICKER ---------- */
+function renderCatalogPicker() {
+  const wrap = $('catalog-table');
+  if (!wrap) return;
+  const q = ($('catalog-search')?.value || '').toLowerCase();
+  let list = [...state.products];
+  if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || pcats(p).map(catLabel).join(' ').toLowerCase().includes(q));
+
+  // Pinned products first (sorted by catalog_order), then rest alphabetically
+  list.sort((a, b) => {
+    if (a.catalog_pinned && !b.catalog_pinned) return -1;
+    if (!a.catalog_pinned && b.catalog_pinned) return 1;
+    if (a.catalog_pinned && b.catalog_pinned) return (a.catalog_order || 0) - (b.catalog_order || 0);
+    return a.name.localeCompare(b.name, 'es');
+  });
+
+  if (!list.length) { wrap.innerHTML = '<div class="empty">No hay productos que coincidan.</div>'; return; }
+
+  wrap.innerHTML = list.map(p => {
+    const isPinned = !!p.catalog_pinned;
+    return `<div class="row${isPinned ? ' feat-on' : ''}">
+      <img src="${esc(p.img)}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="row-main">
+        <div class="row-name">${esc(p.name)}</div>
+        <div class="row-meta">${pcats(p).map(catLabel).join(', ') || '—'}</div>
+      </div>
+      <label class="check-row feat-check-label">
+        <input type="checkbox" class="feat-cb" ${isPinned ? 'checked' : ''} onchange="onCatalogToggle(this,${p.id})">
+        <span class="feat-check-text">Primero en catálogo</span>
+      </label>
+      <input type="number" class="feat-order" value="${p.catalog_order || 0}" min="0" placeholder="Orden"
+             title="Orden en el catálogo (1 = primero)"
+             style="${isPinned ? '' : 'visibility:hidden'}"
+             oninput="onCatalogOrder(this,${p.id})">
+    </div>`;
+  }).join('');
+}
+
+function onCatalogToggle(cb, id) {
+  const p = state.products.find(x => x.id === id);
+  if (!p) return;
+  p.catalog_pinned = cb.checked;
+  if (!cb.checked) p.catalog_order = 0;
+  _catalogChanged.add(id);
+  const row = cb.closest('.row');
+  row?.classList.toggle('feat-on', cb.checked);
+  const orderInput = row?.querySelector('.feat-order');
+  if (orderInput) orderInput.style.visibility = cb.checked ? '' : 'hidden';
+}
+
+function onCatalogOrder(input, id) {
+  const p = state.products.find(x => x.id === id);
+  if (p) { p.catalog_order = parseInt(input.value || '0', 10) || 0; _catalogChanged.add(id); }
+}
+
+async function saveCatalogPins() {
+  if (!_catalogChanged.size) { toast('Sin cambios que guardar'); return; }
+  const btn = $('save-catalog-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  const toUpdate = state.products.filter(p => _catalogChanged.has(p.id));
+  const results = await Promise.all(toUpdate.map(p =>
+    sb.from('products').update({ catalog_pinned: !!p.catalog_pinned, catalog_order: p.catalog_order || 0 }).eq('id', p.id)
+  ));
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+
+  const firstError = results.find(r => r.error);
+  if (firstError?.error) { toast('Error: ' + firstError.error.message, true); return; }
+
+  _catalogChanged.clear();
+  toast(`${toUpdate.length} producto(s) actualizado(s)`);
+  renderCatalogPicker();
 }
 
 /* ---------- RENDER: SUBCATEGORIES ---------- */
@@ -1069,6 +1146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     t.classList.add('active');
     $('tab-' + t.dataset.tab).classList.add('active');
     if (t.dataset.tab === 'destacados') renderFeatured();
+    if (t.dataset.tab === 'catalogo')   renderCatalogPicker();
   }));
 
   $('product-search').addEventListener('input', e => { state.psearch = e.target.value; renderProducts(); });
@@ -1078,6 +1156,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('subcat-cat-filter')?.addEventListener('change', e => { state.sccat = e.target.value; renderSubcats(); });
   $('featured-search')?.addEventListener('input', renderFeatured);
   $('save-featured-btn')?.addEventListener('click', saveFeatured);
+  $('catalog-search')?.addEventListener('input', renderCatalogPicker);
+  $('save-catalog-btn')?.addEventListener('click', saveCatalogPins);
   $('new-product-btn').addEventListener('click', newProduct);
   $('import-products-btn').addEventListener('click', importProducts);
   $('new-cat-btn').addEventListener('click', newCat);

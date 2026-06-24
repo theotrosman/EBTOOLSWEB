@@ -52,11 +52,13 @@ async function loadDataFromSupabase() {
       images:        Array.isArray(p.images)      ? p.images.filter(Boolean)      : [],
       videos:        Array.isArray(p.videos)      ? p.videos.filter(Boolean)      : [],
       related_ids:   Array.isArray(p.related_ids) ? p.related_ids                : [],
-      featured:      !!p.featured,
-      featured_sort: p.featured_sort || 0,
-      badge:         p.badge         || '',
-      badge_color:   p.badge_color   || 'green',
-      badge_enabled: !!p.badge_enabled,
+      featured:        !!p.featured,
+      featured_sort:   p.featured_sort   || 0,
+      catalog_pinned:  !!p.catalog_pinned,
+      catalog_order:   p.catalog_order   || 0,
+      badge:           p.badge           || '',
+      badge_color:     p.badge_color     || 'green',
+      badge_enabled:   !!p.badge_enabled,
     }));
     return true;
   } catch (err) {
