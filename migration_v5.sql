@@ -20,12 +20,14 @@ create index if not exists product_events_pid_idx on product_events (product_id,
 alter table product_events enable row level security;
 
 -- Cualquier visitante puede insertar (tracking anónimo sin PII).
-create policy if not exists "anon_insert_events"
+drop policy if exists "anon_insert_events" on product_events;
+create policy "anon_insert_events"
   on product_events for insert
   with check (true);
 
 -- Solo usuarios autenticados (admins del panel) pueden leer.
-create policy if not exists "auth_read_events"
+drop policy if exists "auth_read_events" on product_events;
+create policy "auth_read_events"
   on product_events for select
   using (auth.role() = 'authenticated');
 
