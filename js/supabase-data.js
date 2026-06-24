@@ -66,3 +66,11 @@ async function loadDataFromSupabase() {
     return false;
   }
 }
+
+/* Registra una vista de producto. Fire-and-forget: no bloquea la UI.
+   Llamar desde openModal() en main.js. */
+function trackProductClick(productId) {
+  const sb = getSupabase();
+  if (!sb || !productId) return;
+  sb.from('product_events').insert({ product_id: productId });
+}

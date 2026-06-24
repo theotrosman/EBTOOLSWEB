@@ -276,3 +276,40 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
 /* AVISOS DE DATOS FALTANTES EN PRODUCTOS */
 .tag.warn{background:#fff3e9;border-color:#f8c89e;color:#a8500c;font-weight:700}
 .tag.warn-sub{background:#fef9ec;border-color:#f5e19a;color:#856a00}
+
+/* ── HEATMAP DE ACTIVIDAD ────────────────────────────────────── */
+.heat-range-pills{display:flex;gap:6px}
+.heat-pill{
+  padding:6px 14px;border-radius:20px;font-size:.8rem;font-weight:700;
+  border:1.5px solid var(--g200);background:#fff;color:var(--g600);cursor:pointer;
+  transition:border-color 150ms,background 150ms,color 150ms;
+  font-family:var(--font);
+}
+.heat-pill:hover{border-color:var(--orange);color:var(--orange)}
+.heat-pill.active{border-color:var(--orange);background:var(--orange);color:#fff}
+.heat-pill:active{transform:scale(0.96)}
+
+.heat-table .row{gap:10px;align-items:center}
+.heat-rank{
+  min-width:26px;text-align:right;font-size:.78rem;font-weight:800;
+  color:var(--g400);flex-shrink:0;
+}
+.heat-bar-wrap{
+  height:6px;background:var(--g100);border-radius:4px;overflow:hidden;
+  flex:1;min-width:60px;margin-top:4px;
+}
+.heat-bar{height:100%;border-radius:4px;transition:width 400ms cubic-bezier(0.23,1,0.32,1)}
+.heat-count{
+  font-size:.8rem;font-weight:700;color:var(--g600);white-space:nowrap;
+  flex-shrink:0;min-width:70px;text-align:right;
+}
+.heat-pin-btn{
+  flex-shrink:0;padding:5px 12px;border-radius:6px;font-size:.78rem;font-weight:700;
+  border:1.5px solid var(--g200);background:#fff;color:var(--g700);cursor:pointer;
+  transition:border-color 150ms,background 150ms,color 150ms;font-family:var(--font);
+  white-space:nowrap;
+}
+.heat-pin-btn:hover{border-color:var(--orange);color:var(--orange)}
+.heat-pin-btn.pinned{border-color:#22c55e;background:#f0fdf4;color:#16a34a}
+.heat-pin-btn:active{transform:scale(0.97)}
+.heat-pin-btn:disabled{opacity:.5;cursor:default;transform:none}

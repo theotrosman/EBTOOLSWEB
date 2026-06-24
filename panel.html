@@ -46,6 +46,7 @@
     <button class="tab" data-tab="subcategorias">Subcategorías</button>
     <button class="tab" data-tab="destacados">Destacados</button>
     <button class="tab" data-tab="catalogo">Catálogo</button>
+    <button class="tab" data-tab="actividad">Actividad</button>
   </nav>
 
   <main class="admin-main">
@@ -124,6 +125,25 @@
       </p>
       <input type="text" id="catalog-search" class="admin-search" placeholder="Buscar producto...">
       <div id="catalog-table" class="data-table"></div>
+    </section>
+
+    <section id="tab-actividad" class="tab-panel">
+      <div class="panel-head">
+        <h2>Actividad de productos</h2>
+        <div class="panel-head-actions">
+          <div class="heat-range-pills">
+            <button class="heat-pill active" data-days="7">7 días</button>
+            <button class="heat-pill" data-days="30">30 días</button>
+            <button class="heat-pill" data-days="">Siempre</button>
+          </div>
+        </div>
+      </div>
+      <p class="check-hint" style="margin-bottom:14px">
+        Cada vez que un visitante abre un producto en el catálogo se registra una vista (sin datos personales).<br>
+        Usá <strong>"Pinear al catálogo"</strong> para que ese producto aparezca entre los primeros sin tocar "Ver más".
+      </p>
+      <div id="heatmap-loading" style="display:none" class="empty">Cargando actividad…</div>
+      <div id="heatmap-table" class="data-table heat-table"></div>
     </section>
   </main>
 </div>

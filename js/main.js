@@ -570,6 +570,7 @@ let modalOpen = false;
 function openModal(id) {
   const p = getProductById(id);
   if (!p) return;
+  if (typeof trackProductClick === 'function') trackProductClick(id);
 
   document.getElementById('modal-img').src          = p.img;
   document.getElementById('modal-img').alt          = p.name;
