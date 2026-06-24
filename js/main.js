@@ -18,6 +18,35 @@ const BADGE_COLORS = {
   orange: '#f47b20', blue: '#3b82f6', black: '#0f0f0f',
 };
 
+/* ─── FUZZY SEARCH HELPERS ─── */
+/* Strips accent marks and lowercases — lets "neumatica" match "neumática". */
+function normalize(str) {
+  return String(str || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/* Bigram similarity: measures how many consecutive 2-char pairs from `query`
+   appear in `text`. Returns 0–1. Handles common typos like "tigera"→"tijera"
+   because they share most bigrams (ti, er, ra) despite one transposition. */
+function bigramScore(text, query) {
+  if (text.includes(query)) return 1; // exact substring: perfect
+  if (query.length < 2) return 0;
+  const bigrams = s => { const b = new Set(); for (let i = 0; i < s.length - 1; i++) b.add(s.slice(i, i + 2)); return b; };
+  const tb = bigrams(text), qb = bigrams(query);
+  if (!qb.size) return 0;
+  let hits = 0; qb.forEach(g => { if (tb.has(g)) hits++; });
+  return hits / qb.size;
+}
+
+function productMatchesFuzzy(p, q) {
+  const THRESHOLD = 0.5; // at least half the bigrams must match
+  const nq = normalize(q);
+  return [
+    normalize(p.name), normalize(p.short), normalize(p.desc),
+    ...productCatLabels(p).map(l => normalize(l)),
+  ].some(f => bigramScore(f, nq) >= THRESHOLD);
+}
+
 /* ─── AVAILABILITY ─── */
 const AVAIL = {
   available:    { label: 'Disponible',  color: '#22c55e' },
@@ -81,24 +110,29 @@ function forceHeroVisible() {
 }
 
 function heroEntrance() {
+  // Strong ease-out: starts fast (instant feedback), decelerates naturally.
+  // Nothing slides from far — small offsets feel like elements "arriving",
+  // large offsets feel like PowerPoint transitions.
+  const E = 'cubic-bezier(0.23, 1, 0.32, 1)';
+
   const tl = gsap.timeline({
-    defaults: { ease: 'power3.out', clearProps: 'all' },
-    onComplete: forceHeroVisible   // belt-and-suspenders cleanup
+    defaults: { ease: E, clearProps: 'all' },
+    onComplete: forceHeroVisible
   });
 
-  tl.from('.hero-eyebrow',      { opacity: 0, x: -20, duration: 0.6 })
-    .from('.hero-title',        { opacity: 0, y: 32,  duration: 0.7 }, '-=0.3')
-    .from('.hero-sub',          { opacity: 0, y: 20,  duration: 0.6 }, '-=0.4')
-    .from('.hero-btns > *',     { opacity: 0, y: 16,  stagger: 0.1, duration: 0.5 }, '-=0.4')
-    .from('.hero-product-card', { opacity: 0, scale: 0.9, y: 30, duration: 0.8, ease: 'back.out(1.4)' }, '-=0.7')
-    .from('.hero-chip',         { opacity: 0, scale: 0.85, stagger: 0.15, duration: 0.5, ease: 'back.out(1.5)' }, '-=0.5')
-    .from('.hero-dots',         { opacity: 0, duration: 0.4 }, '-=0.3');
+  tl.from('.hero-eyebrow',      { opacity: 0, y: 8,  duration: 0.38 })
+    .from('.hero-title',        { opacity: 0, y: 12, duration: 0.46 }, '-=0.26')
+    .from('.hero-sub',          { opacity: 0, y: 8,  duration: 0.38 }, '-=0.3')
+    .from('.hero-trust',        { opacity: 0, y: 6,  duration: 0.34 }, '-=0.28')
+    .from('.hero-btns > *',     { opacity: 0, y: 6,  stagger: 0.055, duration: 0.34 }, '-=0.3')
+    .from('.hero-product-card', { opacity: 0, scale: 0.96, y: 12, duration: 0.52, ease: 'back.out(1.05)' }, '-=0.42')
+    .from('.hero-chip',         { opacity: 0, scale: 0.94, stagger: 0.09, duration: 0.38, ease: 'back.out(1.05)' }, '-=0.36')
+    .from('.hero-dots',         { opacity: 0, duration: 0.26 }, '-=0.2');
 
-  // If tab was hidden during entrance, jump to end and clear everything
   document.addEventListener('visibilitychange', function onFocus() {
     if (!document.hidden) {
-      tl.progress(1);          // snap to completed state
-      forceHeroVisible();      // remove all inline GSAP styles
+      tl.progress(1);
+      forceHeroVisible();
       document.removeEventListener('visibilitychange', onFocus);
     }
   });
@@ -278,24 +312,33 @@ function animateCounters() {
 function initScrollReveal() {
   /*
    * KEY RULE: always gsap.set() → opacity 0 first, then gsap.to() → opacity 1.
-   * Never use gsap.from() inside scroll callbacks — it momentarily sets
-   * elements to opacity:0 mid-scroll, making them "disappear."
-   * clearProps:'all' removes inline styles after animation so CSS is clean.
+   * Never gsap.from() inside scroll callbacks.
+   * clearProps:'all' removes inline styles post-animation.
+   *
+   * ANIMATION PHILOSOPHY (Emil Kowalski):
+   *   - Small y offsets (6–10px) feel like elements "arrive".
+   *     Large offsets (20–32px) feel like PowerPoint slides.
+   *   - Tight stagger (30–50ms): elements appear almost together,
+   *     not one-by-one like a slideshow.
+   *   - Short durations (330–440ms): snappy = intentional.
+   *   - Strong ease-out (cubic-bezier 0.23 1 0.32 1): instant start,
+   *     graceful settle — always faster-feeling than power2.out.
    */
+  const E = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
-  // ── Pre-hide ──────────────────────────────────────────────────────────────
-  gsap.set('.section-title',   { opacity: 0, y: 20 });
-  gsap.set('.why-card',        { opacity: 0, y: 20 });
-  gsap.set('.cat-card',        { opacity: 0, y: 18 });
-  gsap.set('.stat-item',       { opacity: 0, y: 12 });
-  gsap.set('.about-stat',      { opacity: 0, y: 20 });
-  gsap.set('.about-list-item', { opacity: 0, x: -18 });
-  gsap.set('.contact-link',    { opacity: 0, y: 14 });
+  // ── Pre-hide (minimal offsets so nothing "flies" on entrance) ─────────────
+  gsap.set('.section-title',   { opacity: 0, y: 10 });
+  gsap.set('.why-card',        { opacity: 0, y: 10 });
+  gsap.set('.cat-card',        { opacity: 0, scale: 0.97 });
+  gsap.set('.stat-item',       { opacity: 0, y: 6  });
+  gsap.set('.about-stat',      { opacity: 0, y: 10 });
+  gsap.set('.about-list-item', { opacity: 0, x: -8 });
+  gsap.set('.contact-link',    { opacity: 0, y: 7  });
 
   // ── Section headings ─────────────────────────────────────────────────────
   gsap.utils.toArray('.section-title').forEach(el => {
     gsap.to(el, {
-      opacity: 1, y: 0, duration: 0.65, ease: 'power2.out',
+      opacity: 1, y: 0, duration: 0.46, ease: E,
       clearProps: 'all',
       scrollTrigger: { trigger: el, start: 'top 88%', once: true }
     });
@@ -304,17 +347,17 @@ function initScrollReveal() {
   // ── Why cards ────────────────────────────────────────────────────────────
   ScrollTrigger.batch('.why-card', {
     onEnter: batch => gsap.to(batch, {
-      opacity: 1, y: 0, stagger: 0.1, duration: 0.55,
-      ease: 'power2.out', clearProps: 'all'
+      opacity: 1, y: 0, stagger: 0.045, duration: 0.42,
+      ease: E, clearProps: 'all'
     }),
     start: 'top 88%', once: true
   });
 
-  // ── Category cards ───────────────────────────────────────────────────────
+  // ── Category cards — scale fade (no slide, just arrive) ──────────────────
   ScrollTrigger.batch('.cat-card', {
     onEnter: batch => gsap.to(batch, {
-      opacity: 1, y: 0, stagger: 0.06, duration: 0.5,
-      ease: 'power2.out', clearProps: 'all'
+      opacity: 1, scale: 1, stagger: 0.03, duration: 0.36,
+      ease: E, clearProps: 'all'
     }),
     start: 'top 88%', once: true
   });
@@ -322,8 +365,8 @@ function initScrollReveal() {
   // ── Stats bar ────────────────────────────────────────────────────────────
   ScrollTrigger.batch('.stat-item', {
     onEnter: batch => gsap.to(batch, {
-      opacity: 1, y: 0, stagger: 0.08, duration: 0.45,
-      ease: 'power2.out', clearProps: 'all'
+      opacity: 1, y: 0, stagger: 0.035, duration: 0.34,
+      ease: E, clearProps: 'all'
     }),
     start: 'top 88%', once: true
   });
@@ -331,8 +374,8 @@ function initScrollReveal() {
   // ── About stats ──────────────────────────────────────────────────────────
   ScrollTrigger.batch('.about-stat', {
     onEnter: batch => gsap.to(batch, {
-      opacity: 1, y: 0, stagger: 0.1, duration: 0.55,
-      ease: 'power2.out', clearProps: 'all'
+      opacity: 1, y: 0, stagger: 0.05, duration: 0.42,
+      ease: E, clearProps: 'all'
     }),
     start: 'top 88%', once: true
   });
@@ -340,18 +383,17 @@ function initScrollReveal() {
   // ── About list ───────────────────────────────────────────────────────────
   ScrollTrigger.batch('.about-list-item', {
     onEnter: batch => gsap.to(batch, {
-      opacity: 1, x: 0, stagger: 0.08, duration: 0.5,
-      ease: 'power2.out', clearProps: 'all'
+      opacity: 1, x: 0, stagger: 0.04, duration: 0.4,
+      ease: E, clearProps: 'all'
     }),
     start: 'top 90%', once: true
   });
 
-  // ── Contact links — trigger permisivo para evitar que queden en opacity:0
-  // si las imágenes cambian la altura de la página después de calcular triggers.
+  // ── Contact links — permissive trigger so they never stay at opacity:0 ───
   ScrollTrigger.batch('.contact-link', {
     onEnter: batch => gsap.to(batch, {
-      opacity: 1, y: 0, stagger: 0.07, duration: 0.45,
-      ease: 'power2.out', clearProps: 'all'
+      opacity: 1, y: 0, stagger: 0.04, duration: 0.34,
+      ease: E, clearProps: 'all'
     }),
     start: 'top bottom', once: true
   });
@@ -376,7 +418,8 @@ function renderCategories() {
 let currentCat    = 'all';
 let currentSubcat = 'all';
 let searchQuery   = '';
-const PAGE_SIZE  = 16;      // productos iniciales + por cada "ver más"
+let _fuzzyActive  = false;  // true when showing approximate results
+const PAGE_SIZE  = 16;
 let visibleCount = PAGE_SIZE;
 
 const WA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
@@ -387,13 +430,28 @@ function getFiltered() {
     list = list.filter(p => productHasSubcat(p, currentSubcat));
   }
   if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    list = list.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.short.toLowerCase().includes(q) ||
-      p.desc.toLowerCase().includes(q) ||
-      productCatLabels(p).join(' ').toLowerCase().includes(q)
+    const nq = normalize(searchQuery);
+    // Accent-insensitive exact substring match
+    let exact = list.filter(p =>
+      normalize(p.name).includes(nq) ||
+      normalize(p.short).includes(nq) ||
+      normalize(p.desc).includes(nq) ||
+      productCatLabels(p).map(l => normalize(l)).join(' ').includes(nq)
     );
+    if (exact.length > 0) {
+      _fuzzyActive = false;
+      list = exact;
+    } else if (nq.length >= 3) {
+      // Fuzzy fallback: bigram similarity handles typos ("tigera"→"tijera")
+      const fuzzy = list.filter(p => productMatchesFuzzy(p, nq));
+      _fuzzyActive = fuzzy.length > 0;
+      list = fuzzy;
+    } else {
+      _fuzzyActive = false;
+      list = [];
+    }
+  } else {
+    _fuzzyActive = false;
   }
   // Catalog-pinned products always appear first (sorted by catalog_order).
   // Non-pinned products follow in their default Supabase sort order.
@@ -454,9 +512,13 @@ function renderProducts() {
   const countEl = document.getElementById('products-result-count');
   if (countEl) {
     if (searchQuery) {
-      countEl.textContent = filtered.length === 0
-        ? ''
-        : `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''} para "${searchQuery}"`;
+      if (filtered.length === 0) {
+        countEl.textContent = '';
+      } else if (_fuzzyActive) {
+        countEl.textContent = `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''} aproximados para "${searchQuery}"`;
+      } else {
+        countEl.textContent = `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''} para "${searchQuery}"`;
+      }
     } else if (currentCat !== 'all') {
       countEl.textContent = `${filtered.length} producto${filtered.length !== 1 ? 's' : ''} en ${getCatLabel(currentCat)}`;
     } else {
