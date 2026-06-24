@@ -369,8 +369,8 @@ function renderCategories() {
 let currentCat    = 'all';
 let currentSubcat = 'all';
 let searchQuery   = '';
-let showAll       = true;   // show all products by default
-const PAGE_SIZE   = 200;    // effectively no pagination
+const PAGE_SIZE  = 16;      // productos iniciales + por cada "ver más"
+let visibleCount = PAGE_SIZE;
 
 const WA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
 
@@ -391,13 +391,43 @@ function getFiltered() {
   return list;
 }
 
+const CHEVRON_DOWN = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>`;
+
+function productCardHTML(p) {
+  return `<div class="product-card" data-id="${p.id}" onclick="openModal(${p.id})">
+    <div class="product-img-wrap">
+      <img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.opacity='0'">
+      <div class="product-cat-tags">${productCatLabels(p).map(l => `<span class="product-cat-tag">${l}</span>`).join('')}</div>
+      ${(p.badge && p.badge_enabled) ? `<span class="product-badge" style="background:${BADGE_COLORS[p.badge_color]||BADGE_COLORS.green}">${p.badge}</span>` : ''}
+    </div>
+    <div class="product-body">
+      <div class="product-name">${p.name}</div>
+      <div class="product-short">${p.short}</div>
+      <a href="${waMsg(p.name)}" target="_blank" rel="noopener" class="btn-card-wa" onclick="event.stopPropagation()">
+        ${WA_SVG} Consultar por WhatsApp
+      </a>
+    </div>
+  </div>`;
+}
+
+function updateLoadMoreBtn(filtered) {
+  const btn = document.getElementById('load-more-btn');
+  if (!btn) return;
+  const remaining = filtered.length - visibleCount;
+  if (remaining <= 0) {
+    btn.style.display = 'none';
+  } else {
+    btn.style.display = 'inline-flex';
+    btn.innerHTML = `Ver ${remaining} producto${remaining !== 1 ? 's' : ''} más ${CHEVRON_DOWN}`;
+  }
+}
+
 function renderProducts() {
   const grid = document.getElementById('products-grid');
-  const btn  = document.getElementById('load-more-btn');
   if (!grid) return;
 
   const filtered = getFiltered();
-  const toShow   = showAll ? filtered : filtered.slice(0, PAGE_SIZE);
+  const toShow   = filtered.slice(0, visibleCount);
 
   // Update result count label
   const countEl = document.getElementById('products-result-count');
@@ -416,28 +446,10 @@ function renderProducts() {
   if (toShow.length === 0) {
     grid.innerHTML = `<div class="no-results">Sin resultados para "<strong>${searchQuery || currentCat}</strong>". Intentá otra búsqueda.</div>`;
   } else {
-    grid.innerHTML = toShow.map(p => `
-    <div class="product-card" data-id="${p.id}" onclick="openModal(${p.id})">
-      <div class="product-img-wrap">
-        <img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.opacity='0'">
-        <div class="product-cat-tags">${productCatLabels(p).map(l => `<span class="product-cat-tag">${l}</span>`).join('')}</div>
-        ${(p.badge && p.badge_enabled) ? `<span class="product-badge" style="background:${BADGE_COLORS[p.badge_color]||BADGE_COLORS.green}">${p.badge}</span>` : ''}
-      </div>
-      <div class="product-body">
-        <div class="product-name">${p.name}</div>
-        <div class="product-short">${p.short}</div>
-        <a href="${waMsg(p.name)}" target="_blank" rel="noopener" class="btn-card-wa" onclick="event.stopPropagation()">
-          ${WA_SVG} Consultar por WhatsApp
-        </a>
-      </div>
-    </div>`).join('');
+    grid.innerHTML = toShow.map(p => productCardHTML(p)).join('');
   }
 
-  if (btn) {
-    const remaining = filtered.length - PAGE_SIZE;
-    btn.style.display = (!showAll && remaining > 0) ? 'inline-flex' : 'none';
-    if (!showAll && remaining > 0) btn.textContent = `Ver ${remaining} productos más`;
-  }
+  updateLoadMoreBtn(filtered);
 
   // GSAP stagger on new cards — set first, then animate TO avoid flash
   gsap.set('.product-card', { opacity: 0, y: 12 });
@@ -448,10 +460,37 @@ function renderProducts() {
   });
 }
 
+function loadMore() {
+  const grid = document.getElementById('products-grid');
+  if (!grid) return;
+
+  const filtered  = getFiltered();
+  const from      = Math.min(visibleCount, filtered.length);
+  visibleCount    = Math.min(visibleCount + PAGE_SIZE, filtered.length);
+  const newItems  = filtered.slice(from, visibleCount);
+  if (newItems.length === 0) return;
+
+  // Append only the new cards — existing cards never re-render or re-animate
+  const tpl = document.createElement('template');
+  tpl.innerHTML = newItems.map(p => productCardHTML(p)).join('');
+  const newNodes = Array.from(tpl.content.children);
+  newNodes.forEach(node => grid.appendChild(node));
+
+  // Stagger-animate only the newly added cards
+  gsap.set(newNodes, { opacity: 0, y: 18 });
+  gsap.to(newNodes, {
+    opacity: 1, y: 0,
+    duration: 0.4, stagger: 0.04,
+    ease: 'power2.out', clearProps: 'all'
+  });
+
+  updateLoadMoreBtn(filtered);
+}
+
 function filterByCat(cat) {
   currentCat    = cat;
   currentSubcat = 'all';
-  showAll       = true;
+  visibleCount  = PAGE_SIZE;
 
   document.querySelectorAll('.filter-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
   document.querySelectorAll('.cat-card').forEach(c => c.classList.toggle('active', c.dataset.cat === cat));
@@ -463,7 +502,7 @@ function filterByCat(cat) {
 
 function filterBySubcat(sub) {
   currentSubcat = sub;
-  showAll       = true;
+  visibleCount  = PAGE_SIZE;
   document.querySelectorAll('.subfilter-pill').forEach(b => b.classList.toggle('active', b.dataset.subcat === sub));
   renderProducts();
 }
@@ -509,8 +548,8 @@ function initSearch() {
   input.addEventListener('input', () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => {
-      searchQuery = input.value.trim();
-      showAll     = true;
+      searchQuery  = input.value.trim();
+      visibleCount = PAGE_SIZE;
       renderProducts();
     }, 150);
   });
@@ -647,7 +686,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof loadDataFromSupabase === 'function') {
     try {
       const ok = await loadDataFromSupabase();
-      if (ok) renderAllDataDependent();
+      if (ok) {
+        renderAllDataDependent();
+        // Recalcular posiciones después de que los datos de Supabase cambiaron la altura de la página.
+        // Sin esto, los triggers de .about-stat, .contact-link etc. quedan con posiciones del layout
+        // pre-Supabase, y los elementos se quedan en opacity:0 permanentemente.
+        requestAnimationFrame(() => requestAnimationFrame(() => ScrollTrigger.refresh()));
+      }
     } catch (e) { /* keep fallback */ }
   }
 });
