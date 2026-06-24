@@ -583,6 +583,12 @@ const BADGE_COLOR_OPTIONS = [
   { value:'black',  label:'Negro'   },
 ];
 
+const AVAIL_OPTIONS = [
+  { value: 'available',    label: 'Disponible'  },
+  { value: 'out_of_stock', label: 'Sin stock'   },
+  { value: 'on_request',   label: 'Bajo pedido' },
+];
+
 function extraImgRow(url = '') {
   return `<div class="extra-row">
     <input type="text" class="extra-img-input" placeholder="https://... o subí un archivo" value="${esc(url)}">
@@ -689,6 +695,7 @@ function productForm(p) {
       <span>Orden en el hero (menor = primero)</span>
       <input type="number" name="featured_sort" value="${p?.featured_sort || 0}" min="0" style="max-width:100px">
     </label>
+    ${fieldSelect('availability', 'Disponibilidad', AVAIL_OPTIONS, p?.availability || 'available')}
     <div class="field">
       <span>ETIQUETA DEL PRODUCTO</span>
       <div class="check-hint">
@@ -885,6 +892,7 @@ function collectProduct() {
     descr: formVal('descr').trim(),
     active: $('modal-form').elements['active'].checked,
     featured, featured_sort,
+    availability: formVal('availability') || 'available',
     badge: formVal('badge').trim(),
     badge_color: formVal('badge_color') || 'green',
     badge_enabled: !!$('modal-form').elements['badge_enabled']?.checked,
@@ -1216,6 +1224,41 @@ async function delSubcat(key) {
   afterSave(error, 'Subcategoría borrada');
 }
 
+/* ---------- BANNER TAB ---------- */
+async function renderBannerTab() {
+  const { data } = await sb.from('banner').select('text, active').eq('id', 1).maybeSingle();
+  const textInput = $('banner-text');
+  const activeToggle = $('banner-active');
+  if (data) {
+    if (textInput) textInput.value = data.text || '';
+    if (activeToggle) activeToggle.checked = !!data.active;
+  }
+  updateBannerPreview();
+}
+
+function updateBannerPreview() {
+  const prev = $('banner-preview');
+  const textInput = $('banner-text');
+  if (!prev || !textInput) return;
+  const txt = textInput.value.trim();
+  prev.style.display = txt ? '' : 'none';
+  const span = prev.querySelector('.bp-text');
+  if (span) span.textContent = txt;
+}
+
+async function saveBanner() {
+  const textInput = $('banner-text');
+  const activeToggle = $('banner-active');
+  if (!textInput || !activeToggle) return;
+  const btn = $('save-banner-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  const { error } = await sb.from('banner')
+    .upsert({ id: 1, text: textInput.value.trim(), active: activeToggle.checked });
+  if (btn) { btn.disabled = false; btn.textContent = 'Guardar banner'; }
+  if (error) { toast('Error: ' + error.message, true); return; }
+  toast(activeToggle.checked ? 'Banner activado y guardado' : 'Banner guardado (inactivo)');
+}
+
 /* ---------- SAVE HELPER ---------- */
 async function afterSave(error, okMsg) {
   if (error) {
@@ -1245,6 +1288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (t.dataset.tab === 'destacados') renderFeatured();
     if (t.dataset.tab === 'catalogo')   renderCatalogPicker();
     if (t.dataset.tab === 'actividad')  renderHeatmap();
+    if (t.dataset.tab === 'banner')     renderBannerTab();
   }));
 
   $('product-search').addEventListener('input', e => { state.psearch = e.target.value; renderProducts(); });
@@ -1264,6 +1308,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderHeatmap();
     });
   });
+  $('banner-text')?.addEventListener('input', updateBannerPreview);
+  $('save-banner-btn')?.addEventListener('click', saveBanner);
   $('new-product-btn').addEventListener('click', newProduct);
   $('import-products-btn').addEventListener('click', importProducts);
   $('new-cat-btn').addEventListener('click', newCat);

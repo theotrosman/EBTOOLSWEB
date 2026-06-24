@@ -26,10 +26,11 @@ async function loadDataFromSupabase() {
   if (!sb) return false;
 
   try {
-    const [cats, subs, prods] = await Promise.all([
+    const [cats, subs, prods, bannerRes] = await Promise.all([
       sb.from('categories').select('*').order('sort', { ascending: true }),
       sb.from('subcategories').select('*').order('sort', { ascending: true }),
       sb.from('products').select('*').eq('active', true).order('sort', { ascending: true }),
+      sb.from('banner').select('text, active').eq('id', 1).maybeSingle(),
     ]);
 
     if (cats.error || subs.error || prods.error) {
@@ -59,7 +60,11 @@ async function loadDataFromSupabase() {
       badge:           p.badge           || '',
       badge_color:     p.badge_color     || 'green',
       badge_enabled:   !!p.badge_enabled,
+      availability:    p.availability    || 'available',
     }));
+
+    window.SITE_BANNER = (bannerRes.data && bannerRes.data.active) ? bannerRes.data : null;
+
     return true;
   } catch (err) {
     console.warn('[EBTOOLS] Supabase no disponible, uso datos locales.', err);

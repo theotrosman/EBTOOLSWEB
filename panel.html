@@ -47,6 +47,7 @@
     <button class="tab" data-tab="destacados">Destacados</button>
     <button class="tab" data-tab="catalogo">Catálogo</button>
     <button class="tab" data-tab="actividad">Actividad</button>
+    <button class="tab" data-tab="banner">Banner</button>
   </nav>
 
   <main class="admin-main">
@@ -145,6 +146,36 @@
       <div id="heatmap-loading" style="display:none" class="empty">Cargando actividad…</div>
       <div id="heatmap-table" class="data-table heat-table"></div>
     </section>
+
+    <section id="tab-banner" class="tab-panel">
+      <div class="panel-head">
+        <h2>Banner del sitio</h2>
+        <button class="btn-primary" id="save-banner-btn">Guardar banner</button>
+      </div>
+      <p class="check-hint" style="margin-bottom:20px">
+        Aparece arriba de todo en el sitio, antes de la barra de navegación.
+        Ideal para avisos de promociones, novedades o cierres temporales.
+        Desactivalo para ocultarlo sin borrar el texto.
+      </p>
+      <div class="banner-form">
+        <label class="field">
+          <span>Texto del banner</span>
+          <input type="text" id="banner-text" placeholder="Ej: Envíos gratis en compras mayores a $50.000. ¡Aprovechá!">
+        </label>
+        <label class="check-row" style="margin-top:4px">
+          <input type="checkbox" id="banner-active">
+          <strong>Mostrar banner en el sitio</strong>
+        </label>
+      </div>
+      <div style="margin-top:24px">
+        <div class="check-hint" style="margin-bottom:10px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Vista previa</div>
+        <div class="banner-preview" id="banner-preview" style="display:none">
+          <span class="bp-text"></span>
+          <span class="bp-close">×</span>
+        </div>
+      </div>
+    </section>
+
   </main>
 </div>
 

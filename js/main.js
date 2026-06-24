@@ -18,6 +18,13 @@ const BADGE_COLORS = {
   orange: '#f47b20', blue: '#3b82f6', black: '#0f0f0f',
 };
 
+/* ─── AVAILABILITY ─── */
+const AVAIL = {
+  available:    { label: 'Disponible',  color: '#22c55e' },
+  out_of_stock: { label: 'Sin stock',   color: '#ef4444' },
+  on_request:   { label: 'Bajo pedido', color: '#f59e0b' },
+};
+
 /* ─── ROTATING ACCENT WORDS ─── */
 const ACCENT_WORDS = ['impulsan','transforman','aceleran','equipan','potencian'];
 let accentIdx = 0;
@@ -403,11 +410,16 @@ function getFiltered() {
 const CHEVRON_DOWN = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>`;
 
 function productCardHTML(p) {
+  const avail = p.availability || 'available';
+  const availChip = avail !== 'available'
+    ? `<span class="avail-chip avail-chip--${avail}">${AVAIL[avail]?.label || avail}</span>`
+    : '';
   return `<div class="product-card" data-id="${p.id}" onclick="openModal(${p.id})">
     <div class="product-img-wrap">
       <img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.opacity='0'">
       <div class="product-cat-tags">${productCatLabels(p).map(l => `<span class="product-cat-tag">${l}</span>`).join('')}</div>
       ${(p.badge && p.badge_enabled) ? `<span class="product-badge" style="background:${BADGE_COLORS[p.badge_color]||BADGE_COLORS.green}">${p.badge}</span>` : ''}
+      ${availChip}
     </div>
     <div class="product-body">
       <div class="product-name">${p.name}</div>
@@ -576,9 +588,17 @@ function openModal(id) {
   document.getElementById('modal-img').alt          = p.name;
   document.getElementById('modal-tag').textContent  = productCatLabels(p).join(' · ');
   document.getElementById('modal-name').textContent = p.name;
-  document.getElementById('modal-desc').innerHTML = descToHtml(p.desc);
+  document.getElementById('modal-desc').innerHTML   = descToHtml(p.desc);
   document.getElementById('modal-wa-btn').href      = waMsg(p.name);
   document.getElementById('modal-page-btn').href    = `producto.html?id=${p.id}`;
+
+  const availEl = document.getElementById('modal-avail');
+  if (availEl) {
+    const avail = p.availability || 'available';
+    const cfg = AVAIL[avail] || AVAIL.available;
+    availEl.innerHTML = `<span class="avail-dot" style="background:${cfg.color}"></span>${cfg.label}`;
+    availEl.style.display = 'flex';
+  }
 
   const overlay = document.getElementById('modal-overlay');
   overlay.classList.add('open');
@@ -656,6 +676,27 @@ function initScrollTop() {
   }, { passive: true });
 }
 
+/* ─── SITE BANNER ─── */
+function initBanner() {
+  const banner = document.getElementById('site-banner');
+  const textEl = document.getElementById('site-banner-text');
+  if (!banner || !textEl) return;
+  const data = window.SITE_BANNER;
+  if (!data || !data.active || !data.text) { banner.style.display = 'none'; return; }
+  textEl.textContent = data.text;
+  banner.style.display = 'flex';
+  gsap.from(banner, { y: -(banner.offsetHeight || 44), opacity: 0, duration: 0.4, ease: 'power2.out', clearProps: 'all' });
+}
+
+function dismissBanner() {
+  const banner = document.getElementById('site-banner');
+  if (!banner) return;
+  gsap.to(banner, {
+    y: -(banner.offsetHeight || 44), opacity: 0, duration: 0.25, ease: 'power2.in',
+    onComplete() { banner.style.display = 'none'; }
+  });
+}
+
 /* ─── INIT ─── */
 // Todo lo que depende de los datos. Se llama dos veces: una con el bundle
 // (instantáneo) y otra después de Supabase si trajo datos. Así nunca se ve
@@ -698,6 +739,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const ok = await loadDataFromSupabase();
       if (ok) {
         renderAllDataDependent();
+        initBanner();
         // Recalcular posiciones después de que los datos de Supabase cambiaron la altura de la página.
         // Sin esto, los triggers de .about-stat, .contact-link etc. quedan con posiciones del layout
         // pre-Supabase, y los elementos se quedan en opacity:0 permanentemente.

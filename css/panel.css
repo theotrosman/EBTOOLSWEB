@@ -317,3 +317,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
 .heat-pin-btn.pinned{border-color:#22c55e;background:#f0fdf4;color:#16a34a}
 .heat-pin-btn:active{transform:scale(0.97)}
 .heat-pin-btn:disabled{opacity:.5;cursor:default;transform:none}
+
+/* BANNER TAB */
+.banner-form{max-width:560px;display:flex;flex-direction:column;gap:14px}
+.banner-preview{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 20px;background:var(--orange);color:#fff;
+  border-radius:10px;font-size:.875rem;font-weight:500;line-height:1.4;
+  max-width:720px;
+}
+.bp-text{flex:1}
+.bp-close{opacity:.65;font-size:1.3rem;line-height:1;flex-shrink:0;cursor:default}

@@ -16,6 +16,12 @@
 </head>
 <body>
 
+<!-- ===== SITE BANNER ===== -->
+<div class="site-banner" id="site-banner" style="display:none">
+  <span class="site-banner-text" id="site-banner-text"></span>
+  <button class="site-banner-close" onclick="dismissBanner()" aria-label="Cerrar aviso">×</button>
+</div>
+
 <!-- ===== NAVBAR ===== -->
 <nav class="navbar" id="navbar">
   <a class="nav-logo" href="#inicio" aria-label="EBTOOLS inicio">
@@ -426,6 +432,7 @@
     </div>
     <div class="modal-info-side">
       <div class="modal-tag" id="modal-tag"></div>
+      <div class="modal-avail" id="modal-avail" style="display:none"></div>
       <div class="modal-name" id="modal-name"></div>
       <div class="modal-desc" id="modal-desc"></div>
       <div class="modal-actions">

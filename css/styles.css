@@ -1400,3 +1400,43 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   .wa-float-pulse { display: none; }
   .ticker-track { animation: none !important; }
 }
+
+/* ===================== SITE BANNER ===================== */
+.site-banner {
+  position: relative; z-index: 1001;
+  display: flex; align-items: center; justify-content: center;
+  padding: 11px 52px 11px 16px;
+  background: var(--orange); color: var(--white);
+  font-size: 0.875rem; font-weight: 500;
+  text-align: center; line-height: 1.4;
+}
+.site-banner-text { flex: 1; text-align: center; }
+.site-banner-close {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: rgba(255,255,255,0.75);
+  font-size: 1.5rem; line-height: 1; cursor: pointer;
+  padding: 4px 7px; border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.site-banner-close:hover { color: var(--white); background: rgba(0,0,0,0.15); }
+.site-banner-close:active { transform: translateY(-50%) scale(0.88); }
+
+/* ===================== AVAILABILITY ===================== */
+/* Chip at bottom of product card image — only rendered for out_of_stock / on_request. */
+.avail-chip {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 5px 10px;
+  font-size: 0.68rem; font-weight: 800;
+  text-align: center; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--white); pointer-events: none; z-index: 2;
+}
+.avail-chip--out_of_stock { background: rgba(239,68,68,0.88); }
+.avail-chip--on_request   { background: rgba(245,158,11,0.9);  }
+
+/* Dot + label in the product modal */
+.modal-avail {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; font-weight: 600; margin-bottom: 4px;
+}
+.avail-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
