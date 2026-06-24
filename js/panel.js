@@ -443,17 +443,25 @@ async function renderHeatmap() {
       <div class="row-main">
         <div class="row-name">${esc(p.name)}</div>
         <div class="heat-bar-wrap">
-          <div class="heat-bar" style="width:${barW}%;background:rgba(244,123,32,${opacity})"></div>
+          <div class="heat-bar" data-w="${barW}" style="background:rgba(244,123,32,${opacity})"></div>
         </div>
       </div>
       <span class="heat-count">${p._views.toLocaleString('es-AR')} vista${p._views !== 1 ? 's' : ''}</span>
       <button class="heat-pin-btn${isPinned ? ' pinned' : ''}"
               onclick="quickPinFromHeatmap(${p.id}, this)"
-              title="${isPinned ? 'Ya pinneado al catálogo' : 'Pinear: aparecerá entre los primeros en el catálogo'}">
-        ${isPinned ? '✓ Pinneado' : '⬆ Pinear'}
+              title="${isPinned ? 'Ya pinneado al catálogo' : 'Pinear al catálogo'}">
+        ${isPinned ? 'Pinneado' : 'Pinear'}
       </button>
     </div>`;
   }).join('');
+
+  // Animar barras desde 0 con stagger — da sensación de "datos llegando"
+  requestAnimationFrame(() => {
+    wrap.querySelectorAll('.heat-bar').forEach((bar, i) => {
+      bar.style.transitionDelay = `${i * 35}ms`;
+      bar.style.width = bar.dataset.w + '%';
+    });
+  });
 }
 
 async function quickPinFromHeatmap(id, btn) {
@@ -470,10 +478,10 @@ async function quickPinFromHeatmap(id, btn) {
     .eq('id', id);
 
   btn.disabled = false;
-  if (error) { toast('Error: ' + error.message, true); btn.textContent = '⬆ Pinear'; return; }
+  if (error) { toast('Error: ' + error.message, true); btn.textContent = 'Pinear'; return; }
 
   p.catalog_pinned = newPinned;
-  btn.textContent  = newPinned ? '✓ Pinneado' : '⬆ Pinear';
+  btn.textContent  = newPinned ? 'Pinneado' : 'Pinear';
   btn.classList.toggle('pinned', newPinned);
   toast(newPinned ? `"${p.name}" pinneado al catálogo` : `"${p.name}" quitado del catálogo`);
 }
