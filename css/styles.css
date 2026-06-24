@@ -518,11 +518,40 @@ section { padding: 112px 5%; }
   .product-card:hover .product-name { color: var(--orange); }
 }
 
+/* ─── Product image skeleton shimmer ─── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .product-img-wrap {
+  /* position: relative required so absolute children (tags, badges, chips,
+     and the skeleton ::before) are all scoped to the image area. */
+  position: relative;
   aspect-ratio: 1; overflow: hidden; background: var(--gray-50);
   border-bottom: 1px solid var(--gray-100);
 }
+
+/* Shimmer sweep — visible while image is loading, hidden once onload fires. */
+.product-img-wrap::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(
+    90deg,
+    var(--gray-100)  0%,
+    var(--gray-200) 50%,
+    var(--gray-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s linear infinite;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.product-img-wrap.img-loaded::before { opacity: 0; animation: none; }
+
 .product-img-wrap img {
+  /* z-index: 2 places img above the skeleton ::before (z-index: 1). */
+  position: relative; z-index: 2;
   width: 100%; height: 100%; object-fit: contain; padding: 16px;
   transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
 }
@@ -530,6 +559,7 @@ section { padding: 112px 5%; }
 
 .product-cat-tags {
   position: absolute; top: 10px; left: 10px; right: 10px;
+  z-index: 3; /* above img (z-index: 2) */
   display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none;
 }
 .product-cat-tag {
@@ -1061,7 +1091,7 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   font-size: 0.6rem; font-weight: 800;
   color: var(--white); letter-spacing: 0.07em;
   text-transform: uppercase; padding: 3px 9px;
-  border-radius: 5px; pointer-events: none; z-index: 2;
+  border-radius: 5px; pointer-events: none; z-index: 3; /* above img */
   line-height: 1.5;
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
@@ -1429,7 +1459,7 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   padding: 5px 10px;
   font-size: 0.68rem; font-weight: 800;
   text-align: center; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--white); pointer-events: none; z-index: 2;
+  color: var(--white); pointer-events: none; z-index: 3; /* above img */
 }
 .avail-chip--out_of_stock { background: rgba(239,68,68,0.88); }
 .avail-chip--on_request   { background: rgba(245,158,11,0.9);  }

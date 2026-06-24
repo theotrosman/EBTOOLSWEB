@@ -18,6 +18,29 @@ const BADGE_COLORS = {
   orange: '#f47b20', blue: '#3b82f6', black: '#0f0f0f',
 };
 
+/* ─── IMAGE OPTIMIZATION ─── */
+/**
+ * Converts a Supabase Storage "object" URL to the "render/image" endpoint
+ * so Supabase CDN handles resize + WebP conversion before the browser ever
+ * requests the bytes. External (non-Supabase) URLs are returned unchanged.
+ *
+ * Before: .../storage/v1/object/public/bucket/path.jpg
+ * After:  .../storage/v1/render/image/public/bucket/path.jpg?width=480&format=webp&quality=82
+ */
+function optimizeImgUrl(url, width = 480, quality = 82) {
+  if (!url) return url;
+  const m = url.match(/^(https:\/\/[^/]+\.supabase\.co\/storage\/v1\/)object\/(public\/.+?)(\?.*)?$/);
+  if (!m) return url; // external URL — no transformation available
+  return `${m[1]}render/image/${m[2]}?width=${width}&format=webp&quality=${quality}`;
+}
+
+/** 1x / 2x srcset for Supabase images (empty string for external URLs). */
+function imgSrcset(url, baseWidth = 480, quality = 82) {
+  const u1x = optimizeImgUrl(url, baseWidth, quality);
+  if (u1x === url) return ''; // not a Supabase URL
+  return `${u1x} 1x, ${optimizeImgUrl(url, baseWidth * 2, quality)} 2x`;
+}
+
 /* ─── FUZZY SEARCH HELPERS ─── */
 /* Strips accent marks and lowercases — lets "neumatica" match "neumática". */
 function normalize(str) {
@@ -218,7 +241,7 @@ function initHeroRotation() {
       gsap.timeline({ onComplete: () => { heroRotating = false; } })
         .to(img, { opacity: 0, scale: 0.92, duration: 0.3, ease: 'power2.in' })
         .call(() => {
-          img.src = p.img;
+          img.src = optimizeImgUrl(p.img, 640, 85);
           img.alt = p.name;
           if (lname) lname.textContent = p.name;
           if (lcat)  lcat.textContent  = getCatLabel(primaryCat(p));
@@ -226,7 +249,7 @@ function initHeroRotation() {
         })
         .to(img, { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' });
     } else {
-      img.src = p.img;
+      img.src = optimizeImgUrl(p.img, 640, 85);
       img.alt = p.name;
       img.style.opacity = '1';
       if (lname) lname.textContent = p.name;
@@ -419,8 +442,11 @@ let currentCat    = 'all';
 let currentSubcat = 'all';
 let searchQuery   = '';
 let _fuzzyActive  = false;  // true when showing approximate results
-const PAGE_SIZE  = 16;
+// Fewer products on small screens = fewer image requests on first paint.
+// Mobile (< 480): 2-col grid → 8 = 4 rows.  Tablet: 3-col → 12.  Desktop: 4-col → 16.
+const PAGE_SIZE  = window.innerWidth < 480 ? 8 : window.innerWidth < 768 ? 12 : 16;
 let visibleCount = PAGE_SIZE;
+let _loadMoreObserver = null; // IntersectionObserver for auto-pagination
 
 const WA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
 
@@ -468,13 +494,23 @@ function getFiltered() {
 const CHEVRON_DOWN = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>`;
 
 function productCardHTML(p) {
-  const avail = p.availability || 'available';
+  const thumb   = optimizeImgUrl(p.img, 480, 82);
+  const srcset  = imgSrcset(p.img, 480, 82);
+  const isOpt   = thumb !== p.img;
+  // If Supabase transform is unavailable (free plan), onerror falls back to original URL
+  const onErr   = isOpt
+    ? `this.onerror=null;this.removeAttribute('srcset');this.src='${p.img}'`
+    : `this.style.opacity='0'`;
+  const avail   = p.availability || 'available';
   const availChip = avail !== 'available'
     ? `<span class="avail-chip avail-chip--${avail}">${AVAIL[avail]?.label || avail}</span>`
     : '';
   return `<div class="product-card" data-id="${p.id}" onclick="openModal(${p.id})">
     <div class="product-img-wrap">
-      <img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.opacity='0'">
+      <img src="${thumb}"${srcset ? ` srcset="${srcset}"` : ''} alt="${p.name}"
+           loading="lazy" decoding="async"
+           onload="this.closest('.product-img-wrap')?.classList.add('img-loaded')"
+           onerror="${onErr}">
       <div class="product-cat-tags">${productCatLabels(p).map(l => `<span class="product-cat-tag">${l}</span>`).join('')}</div>
       ${(p.badge && p.badge_enabled) ? `<span class="product-badge" style="background:${BADGE_COLORS[p.badge_color]||BADGE_COLORS.green}">${p.badge}</span>` : ''}
       ${availChip}
@@ -646,7 +682,7 @@ function openModal(id) {
   if (!p) return;
   if (typeof trackProductClick === 'function') trackProductClick(id);
 
-  document.getElementById('modal-img').src          = p.img;
+  document.getElementById('modal-img').src          = optimizeImgUrl(p.img, 960, 88);
   document.getElementById('modal-img').alt          = p.name;
   document.getElementById('modal-tag').textContent  = productCatLabels(p).join(' · ');
   document.getElementById('modal-name').textContent = p.name;
@@ -738,6 +774,21 @@ function initScrollTop() {
   }, { passive: true });
 }
 
+/* ─── AUTO-PAGINATION (IntersectionObserver) ─── */
+/* Loads the next batch automatically when the user scrolls to within
+   400px of the "Ver más" button — no click required.
+   The button remains visible so users know there's more content. */
+function initAutoLoadMore() {
+  const btn = document.getElementById('load-more-btn');
+  if (!btn) return;
+  if (_loadMoreObserver) _loadMoreObserver.disconnect();
+  _loadMoreObserver = new IntersectionObserver(
+    ([entry]) => { if (entry.isIntersecting) loadMore(); },
+    { rootMargin: '0px 0px 400px 0px' } // fire 400px before button enters viewport
+  );
+  _loadMoreObserver.observe(btn);
+}
+
 /* ─── SITE BANNER ─── */
 function initBanner() {
   const banner = document.getElementById('site-banner');
@@ -783,6 +834,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSearch();
   initModal();
   initScrollTop();
+  initAutoLoadMore();
   animateCounters();
   initScrollReveal();
 

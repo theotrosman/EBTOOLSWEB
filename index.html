@@ -126,7 +126,7 @@
         <div class="hero-mark hero-mark--tl"></div>
         <div class="hero-mark hero-mark--br"></div>
         <span class="hero-product-badge" id="hero-badge" style="display:none"></span>
-        <img class="hero-product-img" src="" alt="" loading="eager" style="opacity:0">
+        <img class="hero-product-img" src="" alt="" loading="eager" fetchpriority="high" decoding="async" style="opacity:0">
         <div class="hero-product-label">
           <span class="hero-product-label-name">&nbsp;</span>
           <span class="hero-product-label-cat">&nbsp;</span>
@@ -428,7 +428,7 @@
   <div class="modal">
     <div class="modal-img-side">
       <button class="modal-close" onclick="closeModal()" aria-label="Cerrar">×</button>
-      <img id="modal-img" src="" alt="">
+      <img id="modal-img" src="" alt="" decoding="async">
     </div>
     <div class="modal-info-side">
       <div class="modal-tag" id="modal-tag"></div>
