@@ -20,6 +20,15 @@ const BADGE_COLORS = {
 
 /* ─── IMAGE OPTIMIZATION ─── */
 /**
+ * Supabase Image Transform — requires the Pro plan ("image transformations" add-on).
+ * When enabled, images are served as WebP at reduced dimensions via the
+ * render/image CDN endpoint. On free/starter plans the endpoint returns 404,
+ * causing a double-fetch per image (shimmer → 404 → fallback load).
+ * Keep this FALSE until you've confirmed your plan supports it.
+ */
+const USE_IMG_TRANSFORM = false;
+
+/**
  * Converts a Supabase Storage "object" URL to the "render/image" endpoint
  * so Supabase CDN handles resize + WebP conversion before the browser ever
  * requests the bytes. External (non-Supabase) URLs are returned unchanged.
@@ -28,17 +37,31 @@ const BADGE_COLORS = {
  * After:  .../storage/v1/render/image/public/bucket/path.jpg?width=480&format=webp&quality=82
  */
 function optimizeImgUrl(url, width = 480, quality = 82) {
-  if (!url) return url;
+  if (!url || !USE_IMG_TRANSFORM) return url;
   const m = url.match(/^(https:\/\/[^/]+\.supabase\.co\/storage\/v1\/)object\/(public\/.+?)(\?.*)?$/);
   if (!m) return url; // external URL — no transformation available
   return `${m[1]}render/image/${m[2]}?width=${width}&format=webp&quality=${quality}`;
 }
 
-/** 1x / 2x srcset for Supabase images (empty string for external URLs). */
+/** 1x / 2x srcset for Supabase images (empty string when transforms off or external URL). */
 function imgSrcset(url, baseWidth = 480, quality = 82) {
+  if (!USE_IMG_TRANSFORM) return '';
   const u1x = optimizeImgUrl(url, baseWidth, quality);
   if (u1x === url) return ''; // not a Supabase URL
   return `${u1x} 1x, ${optimizeImgUrl(url, baseWidth * 2, quality)} 2x`;
+}
+
+/**
+ * After injecting card HTML via innerHTML, browsers may not fire `onload`
+ * for images already in cache. This helper marks any already-complete image
+ * wrap immediately so the skeleton shimmer hides without waiting for onload.
+ */
+function markLoadedImages(container) {
+  container.querySelectorAll('.product-img-wrap img').forEach(img => {
+    if (img.complete && img.naturalWidth > 0) {
+      img.closest('.product-img-wrap')?.classList.add('img-loaded');
+    }
+  });
 }
 
 /* ─── FUZZY SEARCH HELPERS ─── */
@@ -566,6 +589,8 @@ function renderProducts() {
     grid.innerHTML = `<div class="no-results">Sin resultados para "<strong>${searchQuery || currentCat}</strong>". Intentá otra búsqueda.</div>`;
   } else {
     grid.innerHTML = toShow.map(p => productCardHTML(p)).join('');
+    // Cached images won't fire onload when injected via innerHTML — mark them now
+    markLoadedImages(grid);
   }
 
   updateLoadMoreBtn(filtered);
@@ -594,6 +619,13 @@ function loadMore() {
   tpl.innerHTML = newItems.map(p => productCardHTML(p)).join('');
   const newNodes = Array.from(tpl.content.children);
   newNodes.forEach(node => grid.appendChild(node));
+  // Cached images won't fire onload when inserted via appendChild — mark them now
+  newNodes.forEach(node => {
+    const wrap = node.querySelector?.('.product-img-wrap');
+    if (!wrap) return;
+    const img = wrap.querySelector('img');
+    if (img?.complete && img.naturalWidth > 0) wrap.classList.add('img-loaded');
+  });
 
   // Stagger-animate only the newly added cards
   gsap.set(newNodes, { opacity: 0, y: 18 });

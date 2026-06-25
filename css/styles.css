@@ -532,7 +532,10 @@ section { padding: 112px 5%; }
   border-bottom: 1px solid var(--gray-100);
 }
 
-/* Shimmer sweep — visible while image is loading, hidden once onload fires. */
+/* Shimmer sweep — visible while image is loading, hidden once onload fires.
+   The JS markLoadedImages() helper immediately adds .img-loaded for cached
+   images (before GSAP fades the card in), so return visitors never see the
+   shimmer. New visitors see it only while the image is truly downloading. */
 .product-img-wrap::before {
   content: '';
   position: absolute; inset: 0; z-index: 1;
@@ -545,7 +548,7 @@ section { padding: 112px 5%; }
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s linear infinite;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.2s ease;
 }
 .product-img-wrap.img-loaded::before { opacity: 0; animation: none; }
 
