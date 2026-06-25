@@ -714,8 +714,19 @@ function openModal(id) {
   if (!p) return;
   if (typeof trackProductClick === 'function') trackProductClick(id);
 
-  document.getElementById('modal-img').src          = optimizeImgUrl(p.img, 960, 88);
-  document.getElementById('modal-img').alt          = p.name;
+  // Fade out the current image before swapping src — prevents the old
+  // product photo from being briefly visible while the new one loads.
+  const imgEl = document.getElementById('modal-img');
+  imgEl.style.opacity = '0';
+  const restoreOpacity = () => {
+    imgEl.style.opacity = '1';
+    imgEl.onload  = null;
+    imgEl.onerror = null;
+  };
+  imgEl.onload  = restoreOpacity;
+  imgEl.onerror = restoreOpacity;
+  imgEl.src = optimizeImgUrl(p.img, 960, 88);
+  imgEl.alt = p.name;
   document.getElementById('modal-tag').textContent  = productCatLabels(p).join(' · ');
   document.getElementById('modal-name').textContent = p.name;
   document.getElementById('modal-desc').innerHTML   = descToHtml(p.desc);
@@ -830,15 +841,25 @@ function initBanner() {
   if (!data || !data.active || !data.text) { banner.style.display = 'none'; return; }
   textEl.textContent = data.text;
   banner.style.display = 'flex';
-  gsap.from(banner, { y: -(banner.offsetHeight || 44), opacity: 0, duration: 0.4, ease: 'power2.out', clearProps: 'all' });
+  // Banner is now in-flow (below the ticker). Entrance: expand from 0 height
+  // so it naturally pushes the hero down without a jarring layout jump.
+  gsap.from(banner, {
+    height: 0, paddingTop: 0, paddingBottom: 0, opacity: 0,
+    duration: 0.4, ease: 'power2.out', clearProps: 'all'
+  });
 }
 
 function dismissBanner() {
   const banner = document.getElementById('site-banner');
   if (!banner) return;
+  // Collapse height to 0 — content above (ticker) and below (hero) animate smoothly together.
   gsap.to(banner, {
-    y: -(banner.offsetHeight || 44), opacity: 0, duration: 0.25, ease: 'power2.in',
-    onComplete() { banner.style.display = 'none'; }
+    height: 0, paddingTop: 0, paddingBottom: 0, opacity: 0,
+    duration: 0.28, ease: 'power2.in',
+    onComplete() {
+      banner.style.display = 'none';
+      gsap.set(banner, { clearProps: 'all' });
+    }
   });
 }
 

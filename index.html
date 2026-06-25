@@ -16,12 +16,6 @@
 </head>
 <body>
 
-<!-- ===== SITE BANNER ===== -->
-<div class="site-banner" id="site-banner" style="display:none">
-  <span class="site-banner-text" id="site-banner-text"></span>
-  <button class="site-banner-close" onclick="dismissBanner()" aria-label="Cerrar aviso">×</button>
-</div>
-
 <!-- ===== NAVBAR ===== -->
 <nav class="navbar" id="navbar">
   <a class="nav-logo" href="#inicio" aria-label="EBTOOLS inicio">
@@ -46,7 +40,7 @@
 </nav>
 
 <!-- ===== TICKER ===== -->
-<div class="ticker-wrap">
+<div class="ticker-wrap" id="ticker-wrap">
   <div class="ticker-track">
     <span class="ticker-item">Herramientas Neumáticas <span>—</span></span>
     <span class="ticker-item">Equipamiento Agrícola <span>—</span></span>
@@ -58,6 +52,14 @@
     <span class="ticker-item">Filtros y Acoples <span>—</span></span>
     <span class="ticker-item">MercadoLíder Oficial <span>—</span></span>
   </div>
+</div>
+
+<!-- ===== SITE BANNER ===== -->
+<!-- Below the ticker, above the hero — contextual announcements sit here,
+     not above the nav where they compete with the fixed navbar. -->
+<div class="site-banner" id="site-banner" style="display:none">
+  <span class="site-banner-text" id="site-banner-text"></span>
+  <button class="site-banner-close" onclick="dismissBanner()" aria-label="Cerrar aviso">×</button>
 </div>
 
 <!-- ===== HERO ===== -->
