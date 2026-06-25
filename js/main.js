@@ -818,16 +818,22 @@ function initScrollTop() {
 }
 
 /* ─── AUTO-PAGINATION (IntersectionObserver) ─── */
-/* Loads the next batch automatically when the user scrolls to within
-   400px of the "Ver más" button — no click required.
-   The button remains visible so users know there's more content. */
+/* Loads the next batch automatically when the user scrolls within 200px
+   of the "Ver más" button.
+
+   Critical: gate on scrollY > 80 so the observer doesn't fire immediately
+   when renderProducts() flips the button from display:none → display:inline-flex.
+   On initial render the user is at the top (scrollY ≈ 0) — without the gate,
+   the 200px rootMargin would swallow all batches instantly and hide the button. */
 function initAutoLoadMore() {
   const btn = document.getElementById('load-more-btn');
   if (!btn) return;
   if (_loadMoreObserver) _loadMoreObserver.disconnect();
   _loadMoreObserver = new IntersectionObserver(
-    ([entry]) => { if (entry.isIntersecting) loadMore(); },
-    { rootMargin: '0px 0px 400px 0px' } // fire 400px before button enters viewport
+    ([entry]) => {
+      if (entry.isIntersecting && window.scrollY > 80) loadMore();
+    },
+    { rootMargin: '0px 0px 200px 0px' }
   );
   _loadMoreObserver.observe(btn);
 }
