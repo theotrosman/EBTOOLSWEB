@@ -224,6 +224,13 @@ body.page-leaving { opacity: 0 !important; animation: none !important; transitio
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .hero-product-card:hover img { transform: scale(1.04); }
+.hero-product-card img.img-error { display: none; }
+.hero-product-card::after {
+  content: 'Imagen no disponible';
+  display: none;
+  font-size: 0.8rem; font-weight: 600; color: var(--gray-400);
+}
+.hero-product-card:has(img.img-error)::after { display: block; }
 
 .hero-product-label {
   position: absolute; bottom: 0; left: 0; right: 0;
@@ -552,6 +559,18 @@ section { padding: 112px 5%; }
   transition: opacity 0.2s ease;
 }
 .product-img-wrap.img-loaded::before { opacity: 0; animation: none; }
+
+/* Broken image (e.g. dead legacy URL): stop the shimmer and show a
+   placeholder instead of leaving an invisible blank box. */
+.product-img-wrap.img-error::before { opacity: 0; animation: none; }
+.product-img-wrap.img-error::after {
+  content: 'Imagen no disponible';
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 20px;
+  font-size: 0.72rem; font-weight: 600; color: var(--gray-400);
+}
+.product-img-wrap.img-error img { display: none; }
 
 .product-img-wrap img {
   /* z-index: 2 places img above the skeleton ::before (z-index: 1). */
@@ -1155,6 +1174,12 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   max-width: 100%; max-height: 100%;
   width: auto; height: auto;
   object-fit: contain;
+}
+.carousel-slide--error { position: relative; }
+.carousel-slide--error img { display: none; }
+.carousel-slide--error::after {
+  content: 'Imagen no disponible';
+  font-size: 0.85rem; font-weight: 600; color: var(--gray-400);
 }
 
 .carousel-arrow {

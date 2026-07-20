@@ -26,7 +26,7 @@ const BADGE_COLORS = {
  * causing a double-fetch per image (shimmer → 404 → fallback load).
  * Keep this FALSE until you've confirmed your plan supports it.
  */
-const USE_IMG_TRANSFORM = false;
+const USE_IMG_TRANSFORM = true;
 
 /**
  * Converts a Supabase Storage "object" URL to the "render/image" endpoint
@@ -258,13 +258,28 @@ function initHeroRotation() {
     }
   }
 
+  // Same retry-then-placeholder strategy as product cards, applied to the hero image.
+  function setHeroImg(p) {
+    img.classList.remove('img-error');
+    const opt = optimizeImgUrl(p.img, 640, 85);
+    img.onerror = () => {
+      if (opt !== p.img) {
+        img.onerror = () => img.classList.add('img-error');
+        img.src = p.img;
+      } else {
+        img.classList.add('img-error');
+      }
+    };
+    img.src = opt;
+  }
+
   function paint(p, animate) {
     if (!p) return;
     if (animate) {
       gsap.timeline({ onComplete: () => { heroRotating = false; } })
         .to(img, { opacity: 0, scale: 0.92, duration: 0.3, ease: 'power2.in' })
         .call(() => {
-          img.src = optimizeImgUrl(p.img, 640, 85);
+          setHeroImg(p);
           img.alt = p.name;
           if (lname) lname.textContent = p.name;
           if (lcat)  lcat.textContent  = getCatLabel(primaryCat(p));
@@ -272,7 +287,7 @@ function initHeroRotation() {
         })
         .to(img, { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' });
     } else {
-      img.src = optimizeImgUrl(p.img, 640, 85);
+      setHeroImg(p);
       img.alt = p.name;
       img.style.opacity = '1';
       if (lname) lname.textContent = p.name;
@@ -515,14 +530,28 @@ function getFiltered() {
 
 const CHEVRON_DOWN = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>`;
 
+/**
+ * Product card image failed to load. If it was requesting the optimized
+ * (transformed) version, retry once with the original URL — the transform
+ * endpoint can fail even when the source image is fine. If that also fails
+ * (e.g. a dead legacy URL), mark the wrap so CSS shows a placeholder instead
+ * of leaving an invisible blank box.
+ */
+function onProductImgError(img, originalUrl) {
+  if (originalUrl && img.src !== originalUrl) {
+    img.onerror = () => onProductImgError(img, null);
+    img.removeAttribute('srcset');
+    img.src = originalUrl;
+  } else {
+    img.closest('.product-img-wrap')?.classList.add('img-error');
+  }
+}
+
 function productCardHTML(p) {
   const thumb   = optimizeImgUrl(p.img, 480, 82);
   const srcset  = imgSrcset(p.img, 480, 82);
   const isOpt   = thumb !== p.img;
-  // If Supabase transform is unavailable (free plan), onerror falls back to original URL
-  const onErr   = isOpt
-    ? `this.onerror=null;this.removeAttribute('srcset');this.src='${p.img}'`
-    : `this.style.opacity='0'`;
+  const onErr   = `onProductImgError(this, ${isOpt ? `'${p.img}'` : 'null'})`;
   const avail   = p.availability || 'available';
   const availChip = avail !== 'available'
     ? `<span class="avail-chip avail-chip--${avail}">${AVAIL[avail]?.label || avail}</span>`

@@ -8,6 +8,28 @@ function descToHtml(text) {
     .replace(/\n/g, '<br>');
 }
 
+/* ─── IMAGE OPTIMIZATION ─── */
+/* Same Supabase render/image transform used on the homepage — resizes and
+   converts to WebP before the browser downloads the bytes. External
+   (non-Supabase) URLs pass through unchanged. */
+function optimizeImgUrl(url, width = 480, quality = 82) {
+  if (!url) return url;
+  const m = url.match(/^(https:\/\/[^/]+\.supabase\.co\/storage\/v1\/)object\/(public\/.+?)(\?.*)?$/);
+  if (!m) return url;
+  return `${m[1]}render/image/${m[2]}?width=${width}&format=webp&quality=${quality}`;
+}
+
+/* Retry with the original URL if the transform fails; if that also fails,
+   fall back to hiding the broken slide instead of an invisible blank image. */
+function onProductImgError(img, originalUrl, onFinalFail) {
+  if (originalUrl && img.src !== originalUrl) {
+    img.onerror = () => onProductImgError(img, null, onFinalFail);
+    img.src = originalUrl;
+  } else {
+    onFinalFail(img);
+  }
+}
+
 function initNavbar() {
   const navbar = document.querySelector('.navbar');
   const toggle = document.getElementById('nav-toggle');
@@ -97,10 +119,11 @@ function buildSlideHtml(item, i, productName) {
     </div>`;
   }
   // img
+  const src = optimizeImgUrl(item.url, 900, 85);
   return `<div class="carousel-slide" data-idx="${i}">
-    <img src="${escAttr(item.url)}" alt="${escAttr(productName)} — imagen ${i + 1}"
-         loading="${i === 0 ? 'eager' : 'lazy'}"
-         onerror="this.style.opacity='0'">
+    <img src="${escAttr(src)}" alt="${escAttr(productName)} — imagen ${i + 1}"
+         loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async"
+         onerror="onProductImgError(this, ${src !== item.url ? `'${escAttr(item.url)}'` : 'null'}, el => el.parentElement.classList.add('carousel-slide--error'))">
   </div>`;
 }
 
@@ -117,8 +140,10 @@ function buildThumbHtml(item, i) {
       <span class="thumb-play-icon">${PLAY_SVG_SM}</span>
     </button>`;
   }
+  const thumbSrc = optimizeImgUrl(item.url, 120, 75);
   return `<button class="gallery-thumb ${i === 0 ? 'active' : ''}" data-go="${i}" aria-label="Imagen ${i + 1}">
-    <img src="${escAttr(item.url)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'">
+    <img src="${escAttr(thumbSrc)}" alt="" loading="lazy"
+         onerror="onProductImgError(this, ${thumbSrc !== item.url ? `'${escAttr(item.url)}'` : 'null'}, el => el.parentElement.style.display='none')">
   </button>`;
 }
 
