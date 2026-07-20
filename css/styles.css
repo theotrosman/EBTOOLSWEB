@@ -1031,17 +1031,17 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   .filter-pill { padding: 10px 16px; font-size: 0.85rem; }
   .subfilter-pill { padding: 8px 14px; font-size: 0.8rem; }
 
-  /* Category chips: single scrollable row instead of wrapping into a wall of buttons */
+  /* Category chips: single scrollable row instead of wrapping into a wall of
+     buttons. Contained within the section's own width (no negative-margin
+     bleed) so it can never push the page wider than the viewport. */
   .filter-pills, .subfilter-pills.visible {
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    margin: 0 -5%;
-    padding-left: 5%;
-    padding-right: 5%;
-    mask-image: linear-gradient(to right, transparent 0, black 5%, black 95%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0, black 5%, black 95%, transparent 100%);
+    max-width: 100%;
+    mask-image: linear-gradient(to right, black 90%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
   }
   .filter-pills::-webkit-scrollbar, .subfilter-pills::-webkit-scrollbar { display: none; }
   .subfilter-pills.visible { padding-top: 12px; }
@@ -1094,7 +1094,7 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   .stat-num { font-size: 1.5rem; }
   .stat-label { font-size: 0.72rem; }
 
-  .filter-pills, .subfilter-pills.visible { gap: 6px; margin: 0 -4%; padding-left: 4%; padding-right: 4%; }
+  .filter-pills, .subfilter-pills.visible { gap: 6px; }
   .filter-pill { padding: 9px 14px; font-size: 0.82rem; }
 
   .about-section { padding: 52px 4%; }
