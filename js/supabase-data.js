@@ -57,6 +57,8 @@ async function loadDataFromSupabase() {
       featured_sort:   p.featured_sort   || 0,
       catalog_pinned:  !!p.catalog_pinned,
       catalog_order:   p.catalog_order   || 0,
+      cat_order:       (p.cat_order    && typeof p.cat_order    === 'object') ? p.cat_order    : {},
+      subcat_order:    (p.subcat_order && typeof p.subcat_order === 'object') ? p.subcat_order : {},
       badge:           p.badge           || '',
       badge_color:     p.badge_color     || 'green',
       badge_enabled:   !!p.badge_enabled,

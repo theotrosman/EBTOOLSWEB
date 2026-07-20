@@ -46,6 +46,7 @@
     <button class="tab" data-tab="subcategorias">Subcategorías</button>
     <button class="tab" data-tab="destacados">Destacados</button>
     <button class="tab" data-tab="catalogo">Catálogo</button>
+    <button class="tab" data-tab="orden">Orden</button>
     <button class="tab" data-tab="actividad">Actividad</button>
     <button class="tab" data-tab="banner">Banner</button>
   </nav>
@@ -126,6 +127,27 @@
       </p>
       <input type="text" id="catalog-search" class="admin-search" placeholder="Buscar producto...">
       <div id="catalog-table" class="data-table"></div>
+    </section>
+
+    <section id="tab-orden" class="tab-panel">
+      <div class="panel-head">
+        <h2>Orden de los productos</h2>
+        <button class="btn-primary" id="save-order-btn">Guardar cambios</button>
+      </div>
+      <p class="check-hint" style="margin-bottom:14px">
+        Elegí en qué <strong>orden</strong> aparecen los productos, según el contexto.<br>
+        Escribí el <strong>número de orden</strong> en cada producto (1 = primero). Los que dejes en 0
+        aparecen después, en el orden por defecto. Podés ordenar el catálogo <strong>general</strong>,
+        o el orden dentro de una <strong>categoría</strong> o <strong>subcategoría</strong> puntual.
+      </p>
+      <div class="filter-bar">
+        <label class="filter-bar-select">
+          <span>Contexto</span>
+          <select id="order-context"></select>
+        </label>
+        <input type="text" id="order-search" class="admin-search" placeholder="Buscar producto...">
+      </div>
+      <div id="order-table" class="data-table"></div>
     </section>
 
     <section id="tab-actividad" class="tab-panel">

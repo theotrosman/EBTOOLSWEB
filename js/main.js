@@ -392,6 +392,49 @@ function animateCounters() {
   });
 }
 
+/* ─── SCRAMBLE HOVER EN LAS STATS ───
+   Efecto sobrio: al pasar el mouse por un número de la barra de stats, los
+   caracteres se "revuelven" un instante y se resuelven de izquierda a derecha.
+   Solo en dispositivos con puntero real (no toques) y respetando reduced-motion.
+   No toca los caracteres no alfanuméricos (el "+" queda quieto). */
+function initStatsScramble() {
+  try {
+    if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  } catch (_) { return; }
+
+  const GLYPHS = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const rnd = () => GLYPHS[(Math.random() * GLYPHS.length) | 0];
+
+  document.querySelectorAll('.stat-num').forEach(el => {
+    let raf = null;
+    const scramblable = ch => /[0-9A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(ch);
+
+    function run() {
+      const target = el.textContent;      // valor final ya animado por el counter
+      const chars  = [...target];
+      const start  = performance.now();
+      const DURATION = 480;
+      if (raf) cancelAnimationFrame(raf);
+
+      function frame(now) {
+        const t = Math.min((now - start) / DURATION, 1);
+        // Revelado progresivo de izquierda a derecha.
+        const revealCount = Math.floor(t * chars.length);
+        el.textContent = chars.map((ch, i) => {
+          if (i < revealCount || !scramblable(ch)) return ch;
+          return rnd();
+        }).join('');
+        if (t < 1) { raf = requestAnimationFrame(frame); }
+        else { el.textContent = target; raf = null; }
+      }
+      raf = requestAnimationFrame(frame);
+    }
+
+    el.addEventListener('mouseenter', run);
+  });
+}
+
 /* ─── SCROLL REVEAL ─── */
 function initScrollReveal() {
   /*
@@ -510,6 +553,17 @@ let visibleCount = PAGE_SIZE;
 
 const WA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
 
+// Valor de orden del producto para el contexto de filtrado activo.
+function contextOrderVal(p) {
+  if (currentCat !== 'all' && currentSubcat !== 'all') {
+    return (p.subcat_order && p.subcat_order[currentSubcat]) || 0;
+  }
+  if (currentCat !== 'all') {
+    return (p.cat_order && p.cat_order[currentCat]) || 0;
+  }
+  return p.sort || 0;
+}
+
 function getFiltered() {
   let list = currentCat === 'all' ? PRODUCTS : PRODUCTS.filter(p => productHasCat(p, currentCat));
   if (currentCat !== 'all' && currentSubcat !== 'all') {
@@ -539,9 +593,23 @@ function getFiltered() {
   } else {
     _fuzzyActive = false;
   }
-  // Catalog-pinned products always appear first (sorted by catalog_order).
-  // Non-pinned products follow in their default Supabase sort order.
-  const hasPinned = list.some(p => p.catalog_pinned);
+  // Orden por importancia según el contexto activo:
+  //   subcategoría activa → subcat_order[sub]
+  //   categoría activa    → cat_order[cat]
+  //   vista general       → sort
+  // Los que tienen orden explícito (>0) van primero, ascendente; el resto
+  // conserva su orden natural (Array.sort es estable en JS moderno).
+  list = [...list].sort((a, b) => {
+    const oa = contextOrderVal(a), ob = contextOrderVal(b);
+    if (oa > 0 && ob > 0) return oa - ob;
+    if (oa > 0) return -1;
+    if (ob > 0) return 1;
+    return 0;
+  });
+
+  // Los "primeros en el catálogo" (pinned) flotan arriba de todo, pero solo en
+  // la vista general — dentro de una categoría manda el orden de esa categoría.
+  const hasPinned = currentCat === 'all' && list.some(p => p.catalog_pinned);
   if (hasPinned) {
     list = [
       ...list.filter(p => p.catalog_pinned).sort((a, b) => (a.catalog_order || 0) - (b.catalog_order || 0)),
@@ -966,6 +1034,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       painted = true;
       initScrollReveal();
       initBanner();
+      initStatsScramble();
     }
     animateCounters();
     // Recalcular posiciones: los datos cambiaron el alto de la página y sin esto

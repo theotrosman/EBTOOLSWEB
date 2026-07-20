@@ -4,7 +4,7 @@ const CONFIGURED = CFG.SUPABASE_URL && !CFG.SUPABASE_URL.includes('__SUPABASE_UR
   CFG.SUPABASE_ANON_KEY && !CFG.SUPABASE_ANON_KEY.includes('__SUPABASE_ANON_KEY__');
 
 let sb = null;
-const state = { cats: [], subcats: [], products: [], psearch: '', psort: 'recent', catsearch: '', scsearch: '', sccat: '' };
+const state = { cats: [], subcats: [], products: [], psearch: '', psort: 'recent', catsearch: '', scsearch: '', sccat: '', orderCtx: 'general', ordersearch: '' };
 
 // Devuelve "hace 3 min", "ayer", "12 abr", etc. para mostrar al lado de cada fila.
 function relativeTime(iso) {
@@ -39,6 +39,7 @@ function fullTimestamp(iso) {
 }
 const _featChanged    = new Set(); // IDs whose featured/featured_sort changed in the Destacados picker
 const _catalogChanged = new Set(); // IDs whose catalog_pinned/catalog_order changed in the Catálogo picker
+const _orderChanged   = new Set(); // IDs whose orden (sort / cat_order / subcat_order) changed en el tab Orden
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
@@ -133,7 +134,9 @@ async function loadAll() {
   state.products = p.data || [];
   _featChanged.clear();
   _catalogChanged.clear();
+  _orderChanged.clear();
   populateSubcatCatFilter();
+  populateOrderContext();
   renderProducts();
   renderCats();
   renderSubcats();
@@ -387,6 +390,121 @@ async function saveCatalogPins() {
   _catalogChanged.clear();
   toast(`${toUpdate.length} producto(s) actualizado(s)`);
   renderCatalogPicker();
+}
+
+/* ---------- ORDEN POR CONTEXTO (general / categoría / subcategoría) ---------- */
+// Llena el <select> de contexto: General + una opción por categoría y subcategoría.
+function populateOrderContext() {
+  const sel = $('order-context');
+  if (!sel) return;
+  const cur = state.orderCtx;
+  const catOpts = state.cats.map(c =>
+    `<option value="cat:${esc(c.key)}"${cur === 'cat:' + c.key ? ' selected' : ''}>${esc(c.label)}</option>`).join('');
+  const subOpts = state.subcats.map(s =>
+    `<option value="sub:${esc(s.key)}"${cur === 'sub:' + s.key ? ' selected' : ''}>${esc(subLabel(s.key))} · ${esc(catLabel(s.cat))}</option>`).join('');
+  sel.innerHTML =
+    `<option value="general"${cur === 'general' ? ' selected' : ''}>General (todo el catálogo)</option>` +
+    (catOpts ? `<optgroup label="Por categoría">${catOpts}</optgroup>` : '') +
+    (subOpts ? `<optgroup label="Por subcategoría">${subOpts}</optgroup>` : '');
+}
+
+// Devuelve { type, key } del contexto activo.
+function orderCtxParts() {
+  const ctx = state.orderCtx || 'general';
+  if (ctx.startsWith('cat:')) return { type: 'cat', key: ctx.slice(4) };
+  if (ctx.startsWith('sub:')) return { type: 'sub', key: ctx.slice(4) };
+  return { type: 'general', key: '' };
+}
+
+// Lee/escribe el valor de orden del producto para el contexto activo.
+function orderValOf(p, ctx) {
+  if (ctx.type === 'cat') return (p.cat_order    && p.cat_order[ctx.key])    || 0;
+  if (ctx.type === 'sub') return (p.subcat_order && p.subcat_order[ctx.key]) || 0;
+  return p.sort || 0;
+}
+function setOrderVal(p, ctx, val) {
+  if (ctx.type === 'cat') {
+    p.cat_order = { ...(p.cat_order || {}) };
+    if (val) p.cat_order[ctx.key] = val; else delete p.cat_order[ctx.key];
+  } else if (ctx.type === 'sub') {
+    p.subcat_order = { ...(p.subcat_order || {}) };
+    if (val) p.subcat_order[ctx.key] = val; else delete p.subcat_order[ctx.key];
+  } else {
+    p.sort = val;
+  }
+}
+
+function renderOrder() {
+  const wrap = $('order-table');
+  if (!wrap) return;
+  const ctx = orderCtxParts();
+  const q = (state.ordersearch || '').toLowerCase();
+
+  // Solo los productos que pertenecen al contexto (todos, si es general).
+  let list = state.products.filter(p => {
+    if (ctx.type === 'cat') return pcats(p).includes(ctx.key);
+    if (ctx.type === 'sub') return psubs(p).includes(ctx.key);
+    return true;
+  });
+  if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || pcats(p).map(catLabel).join(' ').toLowerCase().includes(q));
+
+  // Ordenados: primero los que tienen orden explícito (asc), después por nombre.
+  list.sort((a, b) => {
+    const oa = orderValOf(a, ctx), ob = orderValOf(b, ctx);
+    if (oa > 0 && ob > 0) return oa - ob;
+    if (oa > 0) return -1;
+    if (ob > 0) return 1;
+    return a.name.localeCompare(b.name, 'es');
+  });
+
+  if (!list.length) { wrap.innerHTML = '<div class="empty">No hay productos en este contexto.</div>'; return; }
+
+  wrap.innerHTML = list.map(p => {
+    const val = orderValOf(p, ctx);
+    return `<div class="row${val > 0 ? ' feat-on' : ''}">
+      <img src="${esc(p.img)}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="row-main">
+        <div class="row-title">${esc(p.name)}</div>
+        <div class="row-meta">${pcats(p).map(c => `<span class="tag">${esc(catLabel(c))}</span>`).join('')}${psubs(p).map(s => `<span class="tag tag-sub">${esc(subLabel(s))}</span>`).join('')}</div>
+      </div>
+      <input type="number" class="feat-order" value="${val}" min="0" placeholder="Orden"
+             title="Orden en este contexto (1 = primero, 0 = sin preferencia)"
+             oninput="onOrderInput(this,${p.id})">
+    </div>`;
+  }).join('');
+}
+
+function onOrderInput(input, id) {
+  const p = state.products.find(x => x.id === id);
+  if (!p) return;
+  const val = Math.max(0, parseInt(input.value || '0', 10) || 0);
+  setOrderVal(p, orderCtxParts(), val);
+  _orderChanged.add(id);
+  input.closest('.row')?.classList.toggle('feat-on', val > 0);
+}
+
+async function saveOrder() {
+  if (!_orderChanged.size) { toast('Sin cambios que guardar'); return; }
+  const btn = $('save-order-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  const toUpdate = state.products.filter(p => _orderChanged.has(p.id));
+  const results = await Promise.all(toUpdate.map(p =>
+    sb.from('products').update({
+      sort: p.sort || 0,
+      cat_order: p.cat_order || {},
+      subcat_order: p.subcat_order || {},
+    }).eq('id', p.id)
+  ));
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+
+  const firstError = results.find(r => r.error);
+  if (firstError?.error) { toast('Error: ' + firstError.error.message, true); return; }
+
+  _orderChanged.clear();
+  toast(`${toUpdate.length} producto(s) actualizado(s)`);
+  renderOrder();
 }
 
 /* ---------- HEATMAP DE ACTIVIDAD ---------- */
@@ -1287,6 +1405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('tab-' + t.dataset.tab).classList.add('active');
     if (t.dataset.tab === 'destacados') renderFeatured();
     if (t.dataset.tab === 'catalogo')   renderCatalogPicker();
+    if (t.dataset.tab === 'orden')      renderOrder();
     if (t.dataset.tab === 'actividad')  renderHeatmap();
     if (t.dataset.tab === 'banner')     renderBannerTab();
   }));
@@ -1300,6 +1419,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('save-featured-btn')?.addEventListener('click', saveFeatured);
   $('catalog-search')?.addEventListener('input', renderCatalogPicker);
   $('save-catalog-btn')?.addEventListener('click', saveCatalogPins);
+  $('order-context')?.addEventListener('change', e => { state.orderCtx = e.target.value; renderOrder(); });
+  $('order-search')?.addEventListener('input', e => { state.ordersearch = e.target.value; renderOrder(); });
+  $('save-order-btn')?.addEventListener('click', saveOrder);
   document.querySelectorAll('.heat-pill').forEach(pill => {
     pill.addEventListener('click', () => {
       document.querySelectorAll('.heat-pill').forEach(p => p.classList.remove('active'));
