@@ -64,6 +64,16 @@ function markLoadedImages(container) {
   });
 }
 
+/**
+ * Las imágenes viejas alojadas en el WordPress de ebtools.com.ar
+ * (/wp-content/uploads/...) hoy responden 403 porque el dominio quedó detrás
+ * del bot-challenge de Vercel. No cargan para nadie. Esta función marca esas
+ * URLs como NO usables para poder evitarlas donde importa (p.ej. el hero).
+ */
+function heroImageIsUsable(url) {
+  return !!url && !/\/wp-content\/uploads\//i.test(url);
+}
+
 /* ─── FUZZY SEARCH HELPERS ─── */
 /* Strips accent marks and lowercases — lets "neumatica" match "neumática". */
 function normalize(str) {
@@ -230,9 +240,17 @@ function initHeroRotation() {
   const dotsWrap = document.getElementById('hero-dots');
   if (!card || !img || !PRODUCTS.length) return;
 
-  // Build featured list from DB; fall back to first 6 products by sort
-  const featuredList = PRODUCTS.filter(p => p.featured).sort((a, b) => (a.featured_sort||0) - (b.featured_sort||0));
-  heroIds = featuredList.length ? featuredList.map(p => p.id) : PRODUCTS.slice(0, 6).map(p => p.id);
+  // Build featured list from DB; fall back to first 6 products by sort.
+  // Excluimos imágenes del viejo WordPress (ebtools.com.ar/wp-content/...): hoy
+  // devuelven 403 (Vercel bot-challenge) y romperían el hero, que es lo más
+  // visible de la página. El hero solo muestra productos con imagen que carga.
+  const featuredList = PRODUCTS
+    .filter(p => p.featured && heroImageIsUsable(p.img))
+    .sort((a, b) => (a.featured_sort||0) - (b.featured_sort||0));
+  const heroPool = featuredList.length
+    ? featuredList
+    : PRODUCTS.filter(p => heroImageIsUsable(p.img)).slice(0, 6);
+  heroIds = (heroPool.length ? heroPool : PRODUCTS.slice(0, 6)).map(p => p.id);
   heroIdx = 0;
 
   // Clear interval previo si initHeroRotation se llama por segunda vez
@@ -287,9 +305,14 @@ function initHeroRotation() {
         })
         .to(img, { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' });
     } else {
+      // First paint: fade the image in once it has actually decoded, so it
+      // arrives softly into the (previously empty) card rather than popping.
       setHeroImg(p);
       img.alt = p.name;
-      img.style.opacity = '1';
+      gsap.set(img, { opacity: 0 });
+      const revealHero = () => gsap.to(img, { opacity: 1, duration: 0.5, ease: 'power2.out' });
+      if (img.complete && img.naturalWidth > 0) revealHero();
+      else img.addEventListener('load', revealHero, { once: true });
       if (lname) lname.textContent = p.name;
       if (lcat)  lcat.textContent  = getCatLabel(primaryCat(p));
       updateBadge(p);
@@ -348,10 +371,10 @@ function applyDynamicStats() {
       el.textContent = '0' + (el.dataset.suffix || '');
     }
   });
-  // Chips flotantes del hero
+  // Chips flotantes del hero — count real, sin "+" inventado.
   const chipProducts = document.getElementById('hero-chip-products');
   const chipCats     = document.getElementById('hero-chip-cats');
-  if (chipProducts) chipProducts.textContent = '+' + counts.products;
+  if (chipProducts) chipProducts.textContent = counts.products;
   if (chipCats)     chipCats.textContent     = counts.categories;
 }
 
@@ -586,6 +609,26 @@ function updateLoadMoreBtn(filtered) {
     btn.style.display = 'inline-flex';
     btn.innerHTML = `Ver ${remaining} producto${remaining !== 1 ? 's' : ''} más ${CHEVRON_DOWN}`;
   }
+}
+
+/* Fills the grid with shimmer placeholders while the real catalog loads from
+   Supabase. Keeps the page height stable and means we never paint the bundled
+   fallback (with its cropped WordPress thumbs) just to swap it a moment later. */
+function renderProductSkeletons(count) {
+  const grid = document.getElementById('products-grid');
+  if (!grid) return;
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += `<div class="product-card product-card--skeleton" aria-hidden="true">
+      <div class="product-img-wrap"></div>
+      <div class="product-body">
+        <div class="sk-line sk-line--title"></div>
+        <div class="sk-line sk-line--text"></div>
+        <div class="sk-line sk-line--btn"></div>
+      </div>
+    </div>`;
+  }
+  grid.innerHTML = html;
 }
 
 function renderProducts() {
@@ -878,9 +921,8 @@ function dismissBanner() {
 }
 
 /* ─── INIT ─── */
-// Todo lo que depende de los datos. Se llama dos veces: una con el bundle
-// (instantáneo) y otra después de Supabase si trajo datos. Así nunca se ve
-// el hero hardcodeado mientras la DB responde.
+// Todo lo que depende de los datos. Idempotente: se puede llamar de nuevo si
+// Supabase llega tarde sin duplicar listeners.
 function renderAllDataDependent() {
   renderCategories();
   buildFilterPills();
@@ -895,37 +937,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTicker();
   initAnchorScroll();
   initPageTransitions();
-
-  // 1) Primer paint con datos bundleados (instantáneo).
-  renderAllDataDependent();
   initSearch();
   initModal();
   initScrollTop();
-  animateCounters();
-  initScrollReveal();
 
-  // Hero entrance + accent rotation (la rotación de productos ya arrancó
-  // dentro de initHeroRotation()).
-  gsap.delayedCall(0.1, () => {
+  // Placeholders mientras esperamos la DB: skeletons en la grilla (mantienen
+  // el alto → cero layout shift) y chips del hero en blanco (nunca mostramos un
+  // número provisorio incorrecto). El hero-card queda blanco y limpio.
+  renderProductSkeletons(PAGE_SIZE);
+  const chipP = document.getElementById('hero-chip-products');
+  const chipC = document.getElementById('hero-chip-cats');
+  if (chipP) chipP.textContent = '';
+  if (chipC) chipC.textContent = '';
+
+  // El texto estático del hero (no depende de datos) entra ya mismo.
+  gsap.delayedCall(0.05, () => {
     heroEntrance();
     initAccentRotation();
   });
 
-  // 2) En paralelo, traemos Supabase. Si vino con datos, re-renderizamos
-  //    todo lo que depende de los datos (incluido el hero rotation, que
-  //    ahora es idempotente).
+  // Un solo paint con los MEJORES datos disponibles. Nunca se pinta el bundle
+  // (con sus imágenes recortadas de WordPress) salvo que Supabase falle o tarde
+  // demasiado — y en ese caso los skeletons se muestran hasta entonces.
+  let painted = false;
+  const paint = () => {
+    renderAllDataDependent();
+    if (!painted) {
+      painted = true;
+      initScrollReveal();
+      initBanner();
+    }
+    animateCounters();
+    // Recalcular posiciones: los datos cambiaron el alto de la página y sin esto
+    // los triggers de .about-stat, .contact-link, etc. quedan mal calculados.
+    requestAnimationFrame(() => requestAnimationFrame(() => ScrollTrigger.refresh()));
+  };
+
   if (typeof loadDataFromSupabase === 'function') {
-    try {
-      const ok = await loadDataFromSupabase();
-      if (ok) {
-        renderAllDataDependent();
-        initBanner();
-        // Recalcular posiciones después de que los datos de Supabase cambiaron la altura de la página.
-        // Sin esto, los triggers de .about-stat, .contact-link etc. quedan con posiciones del layout
-        // pre-Supabase, y los elementos se quedan en opacity:0 permanentemente.
-        requestAnimationFrame(() => requestAnimationFrame(() => ScrollTrigger.refresh()));
-      }
-    } catch (e) { /* keep fallback */ }
+    // Corremos Supabase contra un timeout. Si gana Supabase pintamos una vez con
+    // datos reales; si gana el timeout pintamos el fallback y re-pintamos cuando
+    // (y si) Supabase finalmente responde con datos.
+    const sb = loadDataFromSupabase().catch(() => false);
+    const raced = await Promise.race([
+      sb,
+      new Promise(r => setTimeout(() => r('timeout'), 2800)),
+    ]);
+    paint();
+    if (raced === 'timeout') sb.then(ok => { if (ok) paint(); });
+  } else {
+    paint();
   }
 });
 

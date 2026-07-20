@@ -104,12 +104,24 @@ body.page-leaving { opacity: 0 !important; animation: none !important; transitio
   position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 5%; height: 68px;
-  background: rgba(255,255,255,0.96);
+  /* Frosted white con un halo cálido apenas perceptible detrás del logo.
+     Nada de degradé saturado full-width: solo una insinuación de la marca. */
+  background:
+    radial-gradient(120% 150% at 0% 0%, rgba(244,123,32,0.07), transparent 42%),
+    rgba(255,255,255,0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid transparent;
-  transition: var(--t);
+  transition: var(--t), box-shadow 0.3s ease;
 }
-.navbar.scrolled { border-bottom-color: var(--gray-300); }
+/* Al scrollear: sombra suave + una fina línea naranja que se desvanece a los
+   costados (transparent → naranja → transparent). Cálido pero discreto. */
+.navbar.scrolled { box-shadow: 0 1px 22px rgba(0,0,0,0.05); }
+.navbar::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(244,123,32,0.45) 50%, transparent);
+  opacity: 0; transition: opacity 0.35s ease; pointer-events: none;
+}
+.navbar.scrolled::after { opacity: 1; }
 
 .nav-logo { display: flex; align-items: center; text-decoration: none; cursor: pointer; }
 .nav-logo img { height: 52px; width: auto; display: block; }
@@ -626,6 +638,23 @@ section { padding: 112px 5%; }
   transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
 }
 .product-card:hover .product-img-wrap img { transform: scale(1.06); }
+
+/* ─── Skeleton cards ───
+   Shown while the catalog loads from Supabase. They hold the grid's height
+   (no layout shift) and mean the bundled fallback data never has to flash. */
+.product-card--skeleton { cursor: default; pointer-events: none; }
+.product-card--skeleton .sk-line {
+  height: 12px; border-radius: 6px; margin: 0 0 10px;
+  background: linear-gradient(90deg, var(--gray-100) 0%, var(--gray-200) 50%, var(--gray-100) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s linear infinite;
+}
+.product-card--skeleton .sk-line--title { width: 82%; height: 15px; margin-top: 2px; }
+.product-card--skeleton .sk-line--text  { width: 56%; }
+.product-card--skeleton .sk-line--btn   { width: 100%; height: 42px; border-radius: 8px; margin-top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .product-card--skeleton .sk-line { animation: none; }
+}
 
 .product-cat-tags {
   position: absolute; top: 10px; left: 10px; right: 10px;
