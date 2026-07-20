@@ -51,6 +51,50 @@ body { font-family: var(--font); background: var(--white); color: var(--black); 
 /* Page fade-out on navigation (triggered by JS adding .page-leaving) */
 body.page-leaving { opacity: 0 !important; animation: none !important; transition: opacity 180ms ease !important; }
 
+/* ===== Ambient sky — nubes grises muy sutiles que derivan lentamente ===== */
+/* Dos capas de blobs radiales difuminados, opacidad muy baja, moviéndose en
+   direcciones distintas para dar sensación de un cielo mirado desde abajo.
+   Fixed + z-index:-1 → viven detrás de todo el contenido; las secciones con
+   fondo blanco se hacen transparentes para dejarlas asomar. */
+.sky-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: var(--white); }
+.sky-bg::before,
+.sky-bg::after {
+  content: ''; position: absolute;
+  top: -25vh; left: -25vw; width: 150vw; height: 150vh;
+  background-repeat: no-repeat;
+  will-change: transform;
+}
+.sky-bg::before {
+  background-image:
+    radial-gradient(closest-side at 18% 28%, rgba(120,130,150,0.10), transparent 72%),
+    radial-gradient(closest-side at 68% 18%, rgba(120,130,150,0.075), transparent 72%),
+    radial-gradient(closest-side at 44% 62%, rgba(120,130,150,0.065), transparent 72%),
+    radial-gradient(closest-side at 84% 72%, rgba(120,130,150,0.085), transparent 72%);
+  background-size: 55% 46%, 46% 40%, 62% 52%, 42% 38%;
+  filter: blur(22px);
+  animation: eb-sky-drift-a 105s ease-in-out infinite alternate;
+}
+.sky-bg::after {
+  background-image:
+    radial-gradient(closest-side at 34% 14%, rgba(110,122,145,0.06), transparent 72%),
+    radial-gradient(closest-side at 80% 46%, rgba(110,122,145,0.055), transparent 72%),
+    radial-gradient(closest-side at 14% 82%, rgba(110,122,145,0.06), transparent 72%);
+  background-size: 52% 46%, 56% 50%, 50% 44%;
+  filter: blur(30px);
+  animation: eb-sky-drift-b 140s ease-in-out infinite alternate;
+}
+@keyframes eb-sky-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(4.5vw, 2.5vh, 0) scale(1.06); }
+}
+@keyframes eb-sky-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1.04); }
+  to   { transform: translate3d(-5vw, -3vh, 0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sky-bg::before, .sky-bg::after { animation: none; }
+}
+
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--gray-100); }
 ::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 2px; }
@@ -220,7 +264,7 @@ body.page-leaving { opacity: 0 !important; animation: none !important; transitio
 }
 
 .hero-product-card img {
-  width: 75%; height: 75%; object-fit: contain;
+  width: 80%; height: 80%; object-fit: contain;
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .hero-product-card:hover img { transform: scale(1.04); }
@@ -433,7 +477,7 @@ section { padding: 112px 5%; }
 .cat-count { font-size: 0.85rem; color: var(--gray-500); font-weight: 500; }
 
 /* ===================== PRODUCTS ===================== */
-.products-section { background: var(--white); }
+.products-section { background: transparent; }
 
 .products-header { margin-bottom: 40px; }
 .products-controls {
@@ -575,7 +619,7 @@ section { padding: 112px 5%; }
 .product-img-wrap img {
   /* z-index: 2 places img above the skeleton ::before (z-index: 1). */
   position: relative; z-index: 2;
-  width: 100%; height: 100%; object-fit: contain; padding: 16px;
+  width: 100%; height: 100%; object-fit: contain; padding: 12px;
   transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
 }
 .product-card:hover .product-img-wrap img { transform: scale(1.06); }
@@ -689,7 +733,7 @@ section { padding: 112px 5%; }
 .about-stat-label { font-size: 0.78rem; color: rgba(255,255,255,0.4); line-height: 1.4; }
 
 /* ===================== CONTACT ===================== */
-.contact-section { background: var(--white); }
+.contact-section { background: transparent; }
 .contact-section .section-sub { margin-bottom: 0; }
 .contact-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
 
@@ -1167,7 +1211,7 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   flex: 0 0 100%;
   display: flex; align-items: center; justify-content: center;
   aspect-ratio: 1 / 1;
-  padding: 36px;
+  padding: 28px;
   background: var(--white);
 }
 .carousel-slide img {
