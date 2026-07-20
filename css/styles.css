@@ -1072,23 +1072,17 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   .products-grid { grid-template-columns: repeat(2, 1fr); }
   .products-controls { flex-direction: column; align-items: stretch; }
   .search-wrap { max-width: 100%; }
-  .filter-pill { padding: 10px 16px; font-size: 0.85rem; }
-  .subfilter-pill { padding: 8px 14px; font-size: 0.8rem; }
+  .filter-pill { padding: 8px 13px; font-size: 0.8rem; }
+  .subfilter-pill { padding: 7px 12px; font-size: 0.76rem; }
 
-  /* Category chips: single scrollable row instead of wrapping into a wall of
-     buttons. Contained within the section's own width (no negative-margin
-     bleed) so it can never push the page wider than the viewport. */
-  .filter-pills, .subfilter-pills.visible {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+  /* Category chips: wrap so TODAS las categorías y subcategorías quedan
+     visibles a la vez (nada de scroll horizontal que las esconda). Pills
+     compactas para que la grilla se mantenga prolija. */
+  .filter-pills, .subfilter-pills {
+    flex-wrap: wrap;
     max-width: 100%;
-    mask-image: linear-gradient(to right, black 90%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
   }
-  .filter-pills::-webkit-scrollbar, .subfilter-pills::-webkit-scrollbar { display: none; }
-  .subfilter-pills.visible { padding-top: 12px; }
+  .subfilter-pills.visible { max-height: none; padding-top: 12px; }
   .product-name { font-size: 0.92rem; }
   .product-short { font-size: 0.78rem; -webkit-line-clamp: 2; }
   .btn-card-wa { padding: 12px; font-size: 0.88rem; }
