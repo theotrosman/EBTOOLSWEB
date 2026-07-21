@@ -965,6 +965,20 @@ function initScrollTop() {
   }, { passive: true });
 }
 
+/* ─── FLOATING WHATSAPP ─── */
+function initWaFloat() {
+  const fab = document.querySelector('.wa-float');
+  const footer = document.querySelector('footer');
+  if (!fab || !footer || !('IntersectionObserver' in window)) return;
+  // Se retira cuando el footer aparece: ahí el botón fijo taparía los datos de
+  // contacto, que en esa zona ya están todos a la vista.
+  const io = new IntersectionObserver(
+    ([entry]) => fab.classList.toggle('wa-float--tucked', entry.isIntersecting),
+    { rootMargin: '0px 0px -10% 0px' }
+  );
+  io.observe(footer);
+}
+
 
 /* ─── SITE BANNER ─── */
 function initBanner() {
@@ -1017,6 +1031,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSearch();
   initModal();
   initScrollTop();
+  initWaFloat();
 
   // Placeholders mientras esperamos la DB: skeletons en la grilla (mantienen
   // el alto → cero layout shift) y chips del hero en blanco (nunca mostramos un

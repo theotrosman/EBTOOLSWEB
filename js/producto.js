@@ -396,6 +396,20 @@ function initPageTransitions() {
   });
 }
 
+/* ─── FLOATING WHATSAPP ─── */
+function initWaFloat() {
+  const fab = document.querySelector('.wa-float');
+  const footer = document.querySelector('footer');
+  if (!fab || !footer || !('IntersectionObserver' in window)) return;
+  // Se retira cuando el footer aparece: ahí el botón fijo taparía los datos de
+  // contacto, que en esa zona ya están todos a la vista.
+  const io = new IntersectionObserver(
+    ([entry]) => fab.classList.toggle('wa-float--tucked', entry.isIntersecting),
+    { rootMargin: '0px 0px -10% 0px' }
+  );
+  io.observe(footer);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   initNavbar();
   initPageTransitions();
@@ -404,4 +418,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   renderProduct();
   gsap.delayedCall(0.05, initAnimations);
+  initWaFloat();
 });
