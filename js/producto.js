@@ -11,12 +11,14 @@ function descToHtml(text) {
 /* ─── IMAGE OPTIMIZATION ─── */
 /* Same Supabase render/image transform used on the homepage — resizes and
    converts to WebP before the browser downloads the bytes. External
-   (non-Supabase) URLs pass through unchanged. */
+   (non-Supabase) URLs pass through unchanged.
+   `resize=contain` is REQUIRED so Supabase scales proportionally: without it a
+   1200×1200 square comes back as 640×1200 (squished). */
 function optimizeImgUrl(url, width = 480, quality = 82) {
   if (!url) return url;
   const m = url.match(/^(https:\/\/[^/]+\.supabase\.co\/storage\/v1\/)object\/(public\/.+?)(\?.*)?$/);
   if (!m) return url;
-  return `${m[1]}render/image/${m[2]}?width=${width}&format=webp&quality=${quality}`;
+  return `${m[1]}render/image/${m[2]}?width=${width}&resize=contain&format=webp&quality=${quality}`;
 }
 
 /* Retry with the original URL if the transform fails; if that also fails,
@@ -321,7 +323,7 @@ function renderRelated(product) {
     : `Más herramientas de ${getCatLabel(primaryCat(product))}`;
 
   grid.innerHTML = related.map(p => `
-    <a href="producto.html?id=${p.id}" class="related-card">
+    <a href="producto?id=${p.id}" class="related-card">
       <img src="${p.img}" alt="${p.name}" loading="lazy">
       <div class="related-card-body">
         <div class="related-card-name">${p.name}</div>

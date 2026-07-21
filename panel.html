@@ -7,7 +7,7 @@
   <title>Panel · EBTOOLS</title>
   <link rel="icon" href="assets/icon.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/panel.css">
+  <link rel="stylesheet" href="css/panel.css?v=10">
 </head>
 <body>
 
@@ -136,9 +136,10 @@
       </div>
       <p class="check-hint" style="margin-bottom:14px">
         Elegí en qué <strong>orden</strong> aparecen los productos, según el contexto.<br>
-        Escribí el <strong>número de orden</strong> en cada producto (1 = primero). Los que dejes en 0
-        aparecen después, en el orden por defecto. Podés ordenar el catálogo <strong>general</strong>,
-        o el orden dentro de una <strong>categoría</strong> o <strong>subcategoría</strong> puntual.
+        <strong>Arrastrá</strong> cada producto (desde el ⋮⋮ de la izquierda) para acomodarlo y agrupar
+        los parecidos: todas las navajas juntas, las tijeras juntas, etc. El número indica la posición.
+        Podés ordenar el catálogo <strong>general</strong>, o dentro de una
+        <strong>categoría</strong> o <strong>subcategoría</strong> puntual. Al terminar, tocá Guardar cambios.
       </p>
       <div class="filter-bar">
         <label class="filter-bar-select">
@@ -218,7 +219,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script>
-<script src="js/panel.js"></script>
+<script src="js/config.js?v=10"></script>
+<script src="js/panel.js?v=10"></script>
 </body>
 </html>

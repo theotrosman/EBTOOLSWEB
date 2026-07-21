@@ -595,7 +595,10 @@ section { padding: 112px 5%; }
   /* position: relative required so absolute children (tags, badges, chips,
      and the skeleton ::before) are all scoped to the image area. */
   position: relative;
-  aspect-ratio: 1; overflow: hidden; background: var(--gray-50);
+  /* 4:5 (portrait) to match the catalog's product photos (1080×1350). A square
+     box left tall shots floating with big side bands looking small; 4:5 lets
+     them fill the card. object-fit: contain still guarantees nothing is cropped. */
+  aspect-ratio: 4 / 5; overflow: hidden; background: var(--gray-50);
   border-bottom: 1px solid var(--gray-100);
 }
 
@@ -634,7 +637,7 @@ section { padding: 112px 5%; }
 .product-img-wrap img {
   /* z-index: 2 places img above the skeleton ::before (z-index: 1). */
   position: relative; z-index: 2;
-  width: 100%; height: 100%; object-fit: contain; padding: 14px 14px 12px;
+  width: 100%; height: 100%; object-fit: contain; padding: 10px 12px 8px;
   transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
 }
 .product-card:hover .product-img-wrap img { transform: scale(1.06); }

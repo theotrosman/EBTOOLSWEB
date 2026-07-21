@@ -34,13 +34,18 @@ const USE_IMG_TRANSFORM = true;
  * requests the bytes. External (non-Supabase) URLs are returned unchanged.
  *
  * Before: .../storage/v1/object/public/bucket/path.jpg
- * After:  .../storage/v1/render/image/public/bucket/path.jpg?width=480&format=webp&quality=82
+ * After:  .../storage/v1/render/image/public/bucket/path.jpg?width=480&resize=contain&format=webp&quality=82
+ *
+ * `resize=contain` is REQUIRED: without it, Supabase's render endpoint returns
+ * the requested width but keeps the ORIGINAL height (e.g. a 1200×1200 square
+ * comes back as 640×1200), which squishes every product photo. `contain` makes
+ * it scale proportionally to fit within width×width — never distorted, never cropped.
  */
 function optimizeImgUrl(url, width = 480, quality = 82) {
   if (!url || !USE_IMG_TRANSFORM) return url;
   const m = url.match(/^(https:\/\/[^/]+\.supabase\.co\/storage\/v1\/)object\/(public\/.+?)(\?.*)?$/);
   if (!m) return url; // external URL — no transformation available
-  return `${m[1]}render/image/${m[2]}?width=${width}&format=webp&quality=${quality}`;
+  return `${m[1]}render/image/${m[2]}?width=${width}&resize=contain&format=webp&quality=${quality}`;
 }
 
 /** 1x / 2x srcset for Supabase images (empty string when transforms off or external URL). */
@@ -341,7 +346,7 @@ function initHeroRotation() {
   if (!card.dataset.bound) {
     card.addEventListener('click', () => {
       const p = PRODUCTS.find(p => p.id === heroIds[heroIdx]);
-      if (p) window.location.href = `producto.html?id=${p.id}`;
+      if (p) window.location.href = `producto?id=${p.id}`;
     });
     card.dataset.bound = '1';
   }
@@ -387,7 +392,7 @@ function animateCounters() {
     gsap.to(obj, {
       val: target, duration: 2, ease: 'power2.out',
       scrollTrigger: { trigger: el, start: 'top 85%', once: true },
-      onUpdate() { el.textContent = Math.round(obj.val) + suffix; }
+      onUpdate() { el.textContent = Math.round(obj.val).toLocaleString('en-US') + suffix; }
     });
   });
 }
@@ -411,11 +416,15 @@ function initStatsScramble() {
     const scramblable = ch => /[0-9A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(ch);
 
     function run() {
+      // Si ya se está revolviendo, ignoramos el re-hover. Al cambiar el ancho de
+      // los glifos el número se re-dimensiona bajo el cursor y dispara mouseenter
+      // de nuevo; leer el.textContent en ese momento capturaría un glifo scrambleado
+      // como valor "final" y el número quedaría corrupto para siempre (p. ej. "P").
+      if (raf) return;
       const target = el.textContent;      // valor final ya animado por el counter
       const chars  = [...target];
       const start  = performance.now();
       const DURATION = 480;
-      if (raf) cancelAnimationFrame(raf);
 
       function frame(now) {
         const t = Math.min((now - start) / DURATION, 1);
@@ -870,7 +879,7 @@ function openModal(id) {
   document.getElementById('modal-name').textContent = p.name;
   document.getElementById('modal-desc').innerHTML   = descToHtml(p.desc);
   document.getElementById('modal-wa-btn').href      = waMsg(p.name);
-  document.getElementById('modal-page-btn').href    = `producto.html?id=${p.id}`;
+  document.getElementById('modal-page-btn').href    = `producto?id=${p.id}`;
 
   const availEl = document.getElementById('modal-avail');
   if (availEl) {

@@ -434,21 +434,24 @@ function setOrderVal(p, ctx, val) {
   }
 }
 
+// Ícono "grip" (6 puntitos) que indica que la fila se puede arrastrar.
+const ORDER_GRIP_SVG = '<svg viewBox="0 0 20 20" width="15" height="15" fill="currentColor"><circle cx="7.5" cy="5" r="1.5"/><circle cx="12.5" cy="5" r="1.5"/><circle cx="7.5" cy="10" r="1.5"/><circle cx="12.5" cy="10" r="1.5"/><circle cx="7.5" cy="15" r="1.5"/><circle cx="12.5" cy="15" r="1.5"/></svg>';
+
 function renderOrder() {
   const wrap = $('order-table');
   if (!wrap) return;
   const ctx = orderCtxParts();
   const q = (state.ordersearch || '').toLowerCase();
+  const filtering = !!q;
 
-  // Solo los productos que pertenecen al contexto (todos, si es general).
-  let list = state.products.filter(p => {
+  // Todos los productos del contexto (todos, si es general).
+  const list = state.products.filter(p => {
     if (ctx.type === 'cat') return pcats(p).includes(ctx.key);
     if (ctx.type === 'sub') return psubs(p).includes(ctx.key);
     return true;
   });
-  if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || pcats(p).map(catLabel).join(' ').toLowerCase().includes(q));
 
-  // Ordenados: primero los que tienen orden explícito (asc), después por nombre.
+  // Orden actual: primero los que tienen orden explícito (asc), después por nombre.
   list.sort((a, b) => {
     const oa = orderValOf(a, ctx), ob = orderValOf(b, ctx);
     if (oa > 0 && ob > 0) return oa - ob;
@@ -457,30 +460,110 @@ function renderOrder() {
     return a.name.localeCompare(b.name, 'es');
   });
 
-  if (!list.length) { wrap.innerHTML = '<div class="empty">No hay productos en este contexto.</div>'; return; }
+  // Posición 1..N de cada producto dentro del contexto completo (aunque se filtre).
+  const posOf = new Map(list.map((p, i) => [p, i + 1]));
 
-  wrap.innerHTML = list.map(p => {
-    const val = orderValOf(p, ctx);
-    return `<div class="row${val > 0 ? ' feat-on' : ''}">
-      <img src="${esc(p.img)}" alt="" onerror="this.style.visibility='hidden'">
+  const view = filtering
+    ? list.filter(p => p.name.toLowerCase().includes(q) || pcats(p).map(catLabel).join(' ').toLowerCase().includes(q))
+    : list;
+
+  if (!view.length) { wrap.innerHTML = '<div class="empty">No hay productos en este contexto.</div>'; return; }
+
+  const note = filtering
+    ? `<div class="order-note order-note--warn">Estás usando el buscador, así que el arrastre está pausado. Borrá lo que escribiste para poder <strong>reordenar arrastrando</strong>.</div>`
+    : `<div class="order-note">Arrastrá cada producto desde el <strong>&#8942;&#8942;</strong> para acomodar el orden. El número de la izquierda es la posición en que se muestra en el sitio. Cuando termines, tocá <strong>Guardar cambios</strong>.</div>`;
+
+  wrap.innerHTML = note +
+    `<div class="order-list${filtering ? ' is-filtered' : ''}">` +
+    view.map(p => `<div class="order-row" data-id="${esc(String(p.id))}" draggable="${filtering ? 'false' : 'true'}">
+      <span class="order-grip" aria-hidden="true">${ORDER_GRIP_SVG}</span>
+      <span class="order-pos">${posOf.get(p)}</span>
+      <img class="order-thumb" src="${esc(p.img)}" alt="" onerror="this.style.visibility='hidden'">
       <div class="row-main">
         <div class="row-title">${esc(p.name)}</div>
         <div class="row-meta">${pcats(p).map(c => `<span class="tag">${esc(catLabel(c))}</span>`).join('')}${psubs(p).map(s => `<span class="tag tag-sub">${esc(subLabel(s))}</span>`).join('')}</div>
       </div>
-      <input type="number" class="feat-order" value="${val}" min="0" placeholder="Orden"
-             title="Orden en este contexto (1 = primero, 0 = sin preferencia)"
-             oninput="onOrderInput(this,${p.id})">
-    </div>`;
-  }).join('');
+    </div>`).join('') +
+    `</div>`;
 }
 
-function onOrderInput(input, id) {
-  const p = state.products.find(x => x.id === id);
-  if (!p) return;
-  const val = Math.max(0, parseInt(input.value || '0', 10) || 0);
-  setOrderVal(p, orderCtxParts(), val);
-  _orderChanged.add(id);
-  input.closest('.row')?.classList.toggle('feat-on', val > 0);
+/* ── Reordenamiento por arrastre (drag & drop) ──
+   Se engancha UNA sola vez sobre #order-table (el contenedor persiste aunque
+   las filas se regeneren). Al soltar, se renumeran las posiciones 1..N según
+   el orden visual y se marcan los productos que cambiaron para guardarlos. */
+let _orderDragEl = null;
+function initOrderDnD() {
+  const wrap = $('order-table');
+  if (!wrap || wrap._dndBound) return;
+  wrap._dndBound = true;
+
+  wrap.addEventListener('dragstart', e => {
+    const row = e.target.closest('.order-row');
+    if (!row || row.getAttribute('draggable') !== 'true') return;
+    _orderDragEl = row;
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', row.dataset.id); } catch (_) {}
+    // Diferir la clase para que la imagen "fantasma" del navegador salga limpia.
+    requestAnimationFrame(() => row.classList.add('dragging'));
+  });
+
+  wrap.addEventListener('dragover', e => {
+    if (!_orderDragEl) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const listEl = _orderDragEl.parentElement;
+    const after = orderRowAfter(listEl, e.clientY);
+    if (after == null) listEl.appendChild(_orderDragEl);
+    else listEl.insertBefore(_orderDragEl, after);
+  });
+
+  wrap.addEventListener('drop', e => { if (_orderDragEl) e.preventDefault(); });
+
+  wrap.addEventListener('dragend', () => {
+    if (!_orderDragEl) return;
+    _orderDragEl.classList.remove('dragging');
+    _orderDragEl = null;
+    commitOrderFromDom();
+  });
+}
+
+// Fila (no arrastrada) delante de la cual insertar, según la Y del cursor.
+function orderRowAfter(listEl, y) {
+  const rows = [...listEl.querySelectorAll('.order-row:not(.dragging)')];
+  let closest = null, closestOffset = -Infinity;
+  for (const row of rows) {
+    const box = row.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closestOffset) { closestOffset = offset; closest = row; }
+  }
+  return closest;
+}
+
+// Lee el orden visual del DOM y lo vuelca a state (posiciones 1..N del contexto).
+function commitOrderFromDom() {
+  const ctx = orderCtxParts();
+  const rows = [...document.querySelectorAll('#order-table .order-row')];
+  rows.forEach((row, i) => {
+    const p = state.products.find(x => String(x.id) === row.dataset.id);
+    if (!p) return;
+    const newVal = i + 1;
+    if (orderValOf(p, ctx) !== newVal) {
+      setOrderVal(p, ctx, newVal);
+      _orderChanged.add(p.id);
+    }
+    const posEl = row.querySelector('.order-pos');
+    if (posEl) posEl.textContent = newVal;
+  });
+  markOrderDirty();
+}
+
+// Resalta el botón Guardar mientras haya cambios sin persistir.
+function markOrderDirty() {
+  const btn = $('save-order-btn');
+  if (!btn) return;
+  const n = _orderChanged.size;
+  btn.classList.toggle('has-changes', n > 0);
+  btn.textContent = n > 0 ? `Guardar cambios (${n})` : 'Guardar cambios';
 }
 
 async function saveOrder() {
@@ -497,12 +580,13 @@ async function saveOrder() {
     }).eq('id', p.id)
   ));
 
-  if (btn) { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+  if (btn) btn.disabled = false;
 
   const firstError = results.find(r => r.error);
-  if (firstError?.error) { toast('Error: ' + firstError.error.message, true); return; }
+  if (firstError?.error) { markOrderDirty(); toast('Error: ' + firstError.error.message, true); return; }
 
   _orderChanged.clear();
+  markOrderDirty();
   toast(`${toUpdate.length} producto(s) actualizado(s)`);
   renderOrder();
 }
@@ -1422,6 +1506,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('order-context')?.addEventListener('change', e => { state.orderCtx = e.target.value; renderOrder(); });
   $('order-search')?.addEventListener('input', e => { state.ordersearch = e.target.value; renderOrder(); });
   $('save-order-btn')?.addEventListener('click', saveOrder);
+  initOrderDnD();
   document.querySelectorAll('.heat-pill').forEach(pill => {
     pill.addEventListener('click', () => {
       document.querySelectorAll('.heat-pill').forEach(p => p.classList.remove('active'));
