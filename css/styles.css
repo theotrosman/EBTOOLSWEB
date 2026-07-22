@@ -834,13 +834,17 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
 
 /* ===================== FLOATING WA ===================== */
 .wa-float {
-  position: fixed; bottom: 24px; right: 24px; z-index: 999;
-  width: 56px; height: 56px;
-  background: var(--wa); border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  text-decoration: none; box-shadow: 0 6px 20px rgba(37,211,102,0.5);
+  position: fixed; bottom: 26px; right: 26px; z-index: 999;
+  height: 62px; padding: 0 26px;
+  background: var(--wa); border-radius: 100px;
+  display: inline-flex; align-items: center; gap: 11px;
+  color: var(--white); text-decoration: none;
+  font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; line-height: 1;
+  box-shadow: 0 12px 32px rgba(37,211,102,0.5), 0 2px 8px rgba(0,0,0,0.12);
   transition: transform .32s var(--ease-out), opacity .32s var(--ease-out), box-shadow .2s var(--ease-out);
 }
+.wa-float-label { white-space: nowrap; position: relative; z-index: 1; }
+.wa-float svg { width: 28px; height: 28px; color: var(--white); flex-shrink: 0; position: relative; z-index: 1; }
 /* Al llegar al footer/contacto se retira deslizándose hacia abajo para no tapar
    los datos de contacto (que ahí ya están todos a la vista). */
 .wa-float--tucked {
@@ -849,17 +853,16 @@ footer { background: var(--gray-900); padding: 48px 5% 28px; }
   pointer-events: none;
 }
 @media (hover: hover) and (pointer: fine) {
-  .wa-float:hover { transform: scale(1.08); box-shadow: 0 8px 28px rgba(37,211,102,0.6); }
+  .wa-float:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(37,211,102,0.6), 0 3px 10px rgba(0,0,0,0.15); }
 }
-.wa-float svg { width: 26px; height: 26px; color: var(--white); }
 .wa-float-pulse {
-  position: absolute; inset: 0; border-radius: 50%;
-  border: 2px solid var(--wa);
-  animation: wa-ring 2.5s cubic-bezier(0.2, 0.8, 0.3, 1) infinite;
+  position: absolute; inset: 0; border-radius: 100px;
+  border: 2px solid var(--wa); z-index: 0;
+  animation: wa-ring 2.6s cubic-bezier(0.2, 0.8, 0.3, 1) infinite;
 }
 @keyframes wa-ring {
-  0% { transform: scale(1); opacity: 0.7; }
-  100% { transform: scale(1.8); opacity: 0; }
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.12); opacity: 0; }
 }
 
 /* ===================== MODAL ===================== */
