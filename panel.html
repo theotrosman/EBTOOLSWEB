@@ -7,7 +7,7 @@
   <title>Panel · EBTOOLS</title>
   <link rel="icon" href="assets/icon.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/panel.css?v=12">
+  <link rel="stylesheet" href="css/panel.css?v=13">
 </head>
 <body>
 
@@ -47,6 +47,7 @@
     <button class="tab" data-tab="destacados">Destacados</button>
     <button class="tab" data-tab="catalogo">Catálogo</button>
     <button class="tab" data-tab="orden">Orden</button>
+    <button class="tab" data-tab="estadisticas">📊 Estadísticas</button>
     <button class="tab" data-tab="actividad">Actividad</button>
     <button class="tab" data-tab="banner">Banner</button>
   </nav>
@@ -151,6 +152,143 @@
       <div id="order-table" class="data-table"></div>
     </section>
 
+    <section id="tab-estadisticas" class="tab-panel">
+      <div class="panel-head">
+        <h2>Estadísticas del sitio</h2>
+        <div class="panel-head-actions">
+          <div class="heat-range-pills" id="stats-range">
+            <button class="heat-pill" data-days="1">Hoy</button>
+            <button class="heat-pill active" data-days="7">7 días</button>
+            <button class="heat-pill" data-days="30">30 días</button>
+            <button class="heat-pill" data-days="90">90 días</button>
+            <button class="heat-pill" data-days="">Siempre</button>
+          </div>
+          <button class="btn-ghost" id="stats-refresh" title="Actualizar">↻ Actualizar</button>
+        </div>
+      </div>
+      <p class="check-hint" id="stats-subhead" style="margin-bottom:18px">
+        Todo lo que hacen los visitantes, en vivo y sin datos personales. Los números comparan
+        contra el <strong>período anterior</strong> de igual duración.
+      </p>
+
+      <div id="stats-loading" class="empty" style="display:none">Cargando estadísticas…</div>
+      <div id="stats-error" class="stats-setup" style="display:none"></div>
+
+      <div id="stats-body" style="display:none">
+        <!-- KPIs -->
+        <div class="stats-kpis" id="stats-kpis"></div>
+
+        <!-- Timeline -->
+        <div class="stats-card stats-card-wide">
+          <div class="stats-card-head">
+            <h3>Actividad por día</h3>
+            <div class="stats-legend" id="tl-legend"></div>
+          </div>
+          <div class="stats-chart-box"><canvas id="chart-timeline"></canvas></div>
+        </div>
+
+        <!-- Funnel + Conversion -->
+        <div class="stats-grid-2">
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Embudo de conversión</h3></div>
+            <div id="stats-funnel" class="stats-funnel"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>WhatsApp por producto</h3><span class="stats-sub">consultas iniciadas</span></div>
+            <div id="stats-wa-products" class="stats-rank"></div>
+          </div>
+        </div>
+
+        <!-- Products: top viewed / never viewed / CTR -->
+        <div class="stats-grid-2">
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Productos más vistos</h3></div>
+            <div id="stats-top-products" class="stats-rank"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Productos nunca vistos</h3><span class="stats-sub">en este período</span></div>
+            <div id="stats-never" class="stats-rank stats-rank-muted"></div>
+          </div>
+        </div>
+
+        <div class="stats-card stats-card-wide">
+          <div class="stats-card-head"><h3>Efectividad por producto (CTR)</h3><span class="stats-sub">se mostró vs. se abrió</span></div>
+          <div id="stats-ctr" class="stats-rank"></div>
+        </div>
+
+        <!-- Searches -->
+        <div class="stats-grid-2">
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Búsquedas más frecuentes</h3></div>
+            <div id="stats-searches" class="stats-rank"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Búsquedas sin resultados</h3><span class="stats-sub">oportunidades de catálogo</span></div>
+            <div id="stats-searches-empty" class="stats-rank stats-rank-warn"></div>
+          </div>
+        </div>
+
+        <!-- Categories + Sources + Devices -->
+        <div class="stats-grid-3">
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Categorías filtradas</h3></div>
+            <div class="stats-chart-box sm"><canvas id="chart-cats"></canvas></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Fuentes de tráfico</h3></div>
+            <div class="stats-chart-box sm"><canvas id="chart-sources"></canvas></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Dispositivos</h3></div>
+            <div class="stats-chart-box sm"><canvas id="chart-devices"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Nuevos vs recurrentes + Navegadores/SO -->
+        <div class="stats-grid-3">
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Visitantes</h3></div>
+            <div class="stats-chart-box sm"><canvas id="chart-newret"></canvas></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Navegadores</h3></div>
+            <div id="stats-browsers" class="stats-rank"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Sistema operativo</h3></div>
+            <div id="stats-os" class="stats-rank"></div>
+          </div>
+        </div>
+
+        <!-- Hora x día heatmap -->
+        <div class="stats-card stats-card-wide">
+          <div class="stats-card-head"><h3>¿Cuándo entran?</h3><span class="stats-sub">sesiones por día y hora</span></div>
+          <div id="stats-hours" class="stats-hours"></div>
+        </div>
+
+        <!-- Páginas + scroll -->
+        <div class="stats-grid-2">
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Páginas más vistas</h3></div>
+            <div id="stats-pages" class="stats-rank"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Enganche</h3><span class="stats-sub">promedios de la sesión</span></div>
+            <div id="stats-engagement" class="stats-rank"></div>
+          </div>
+        </div>
+
+        <!-- Session explorer: el recorrido -->
+        <div class="stats-card stats-card-wide">
+          <div class="stats-card-head">
+            <h3>Recorridos de visitantes</h3>
+            <span class="stats-sub">últimas sesiones — tocá una para ver el paso a paso</span>
+          </div>
+          <div id="stats-sessions" class="stats-sessions"></div>
+        </div>
+      </div>
+    </section>
+
     <section id="tab-actividad" class="tab-panel">
       <div class="panel-head">
         <h2>Actividad de productos</h2>
@@ -219,7 +357,8 @@
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js?v=12"></script>
-<script src="js/panel.js?v=12"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="js/config.js?v=13"></script>
+<script src="js/panel.js?v=13"></script>
 </body>
 </html>

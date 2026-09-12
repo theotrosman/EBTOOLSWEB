@@ -1476,6 +1476,491 @@ async function afterSave(error, okMsg) {
   await loadAll();
 }
 
+/* =====================================================================
+   ESTADÍSTICAS DEL SITIO  (tab "📊 Estadísticas")
+   Lee la tabla analytics_events y arma el panel completo: KPIs con
+   comparativa contra el período anterior, gráficos, rankings, mapa de
+   calor horario y el explorador de recorridos de cada visitante.
+   ===================================================================== */
+const DAY_MS = 86400000;
+let _statsDays = 7;              // ventana seleccionada (null = siempre)
+let _statsLoading = false;
+const statsCharts = {};          // instancias de Chart.js a destruir en cada render
+const STC = ['#F47B20','#0f0f0f','#2E86DE','#27AE60','#8E44AD','#E74C3C','#16A085','#F1C40F','#7F8C8D','#2980B9','#D35400','#C0392B'];
+
+const EV_LABEL = {
+  session_start:      ['Entró al sitio', '🚪'],
+  pageview:           ['Vio una página', '📄'],
+  product_view:       ['Abrió un producto', '🔍'],
+  product_impression: ['Vio un producto en el catálogo', '👁️'],
+  search:             ['Buscó', '🔎'],
+  filter_category:    ['Filtró por categoría', '🗂️'],
+  filter_subcategory: ['Filtró por subcategoría', '🏷️'],
+  load_more:          ['Cargó más productos', '⬇️'],
+  whatsapp_click:     ['Consultó por WhatsApp', '💬'],
+  outbound_click:     ['Salió del sitio', '↗️'],
+  page_time:          ['Tiempo en la página', '⏱️'],
+};
+
+const DEVICE_ICON = { mobile:'📱', desktop:'💻', tablet:'📲' };
+
+function prodName(id) {
+  const p = state.products.find(x => Number(x.id) === Number(id));
+  return p ? p.name : ('Producto #' + id);
+}
+function prodImg(id) {
+  const p = state.products.find(x => Number(x.id) === Number(id));
+  return p ? p.img : '';
+}
+function fmtDur(sec) {
+  sec = Math.round(sec || 0);
+  if (sec < 60) return sec + 's';
+  const m = Math.floor(sec / 60), s = sec % 60;
+  if (m < 60) return m + 'm ' + (s ? s + 's' : '').trim();
+  const h = Math.floor(m / 60);
+  return h + 'h ' + (m % 60) + 'm';
+}
+function pct(n) { return (n * 100).toFixed(n >= 0.1 ? 0 : 1) + '%'; }
+
+// Trae eventos desde una fecha (paginado, hasta un tope de seguridad).
+async function statsFetch(sinceISO, cap = 50000) {
+  const out = [];
+  let from = 0; const PAGE = 1000;
+  while (out.length < cap) {
+    let q = sb.from('analytics_events')
+      .select('created_at,session_id,visitor_id,type,path,product_id,query,meta')
+      .order('created_at', { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (sinceISO) q = q.gte('created_at', sinceISO);
+    const { data, error } = await q;
+    if (error) throw error;
+    if (!data || !data.length) break;
+    out.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return out;
+}
+
+function statsSetupMessage(msg) {
+  return `<div style="text-align:center;padding:10px 0">
+    <div style="font-size:2.2rem;margin-bottom:8px">📊</div>
+    <div style="font-weight:800;font-size:1.05rem;margin-bottom:8px">Falta activar las estadísticas</div>
+    <p style="color:var(--g700);max-width:560px;margin:0 auto 14px;line-height:1.5">
+      Todavía no existe la tabla de eventos en Supabase. Corré una sola vez el archivo
+      <code style="background:var(--g200);padding:2px 6px;border-radius:5px">analytics-schema.sql</code>
+      en <strong>Supabase → SQL Editor</strong> y volvé a entrar. A partir de ahí se registra
+      automáticamente todo lo que hacen los visitantes.
+    </p>
+    ${msg ? `<div style="color:var(--g500);font-size:.78rem">${esc(msg)}</div>` : ''}
+  </div>`;
+}
+
+async function renderStats() {
+  if (_statsLoading) return;
+  _statsLoading = true;
+  const body = $('stats-body'), loading = $('stats-loading'), errBox = $('stats-error');
+  errBox.style.display = 'none';
+  if (!body.style.display || body.style.display === 'none') loading.style.display = '';
+  else loading.style.display = '';
+
+  try {
+    const now = Date.now();
+    let curStart, prevStart, curStartMs, prevStartMs, sinceISO, hasPrev, spanMs;
+    if (_statsDays == null) {
+      // Siempre
+      curStartMs = 0; prevStartMs = null; sinceISO = null; hasPrev = false;
+    } else if (_statsDays === 1) {
+      const d = new Date(); d.setHours(0, 0, 0, 0);
+      curStartMs = d.getTime();
+      prevStartMs = curStartMs - DAY_MS;
+      sinceISO = new Date(prevStartMs).toISOString();
+      hasPrev = true;
+    } else {
+      spanMs = _statsDays * DAY_MS;
+      curStartMs = now - spanMs;
+      prevStartMs = now - 2 * spanMs;
+      sinceISO = new Date(prevStartMs).toISOString();
+      hasPrev = true;
+    }
+
+    const all = await statsFetch(sinceISO);
+    loading.style.display = 'none';
+    body.style.display = 'block';
+
+    // Partir en período actual / anterior
+    const cur = [], prev = [];
+    for (const e of all) {
+      const t = new Date(e.created_at).getTime();
+      if (t >= curStartMs) cur.push(e);
+      else if (hasPrev && t >= prevStartMs) prev.push(e);
+    }
+    if (_statsDays == null && all.length) curStartMs = new Date(all[0].created_at).getTime();
+
+    computeAndRender(cur, prev, hasPrev, { now, curStartMs });
+  } catch (err) {
+    loading.style.display = 'none';
+    body.style.display = 'none';
+    errBox.style.display = 'block';
+    const missing = /relation|does not exist|analytics_events|schema cache|42P01|Could not find the table/i.test(err.message || '');
+    errBox.innerHTML = statsSetupMessage(missing ? '' : ('Detalle: ' + (err.message || err)));
+  } finally {
+    _statsLoading = false;
+  }
+}
+
+function computeAndRender(cur, prev, hasPrev, ctx) {
+  // ---- Agrupar por sesión (para device/fuente/duración/recorrido) ----
+  const buildSessions = (events) => {
+    const map = new Map();
+    for (const e of events) {
+      let s = map.get(e.session_id);
+      if (!s) { s = { id: e.session_id, visitor: e.visitor_id, events: [], start: e.created_at, end: e.created_at, meta: {} }; map.set(e.session_id, s); }
+      s.events.push(e);
+      if (e.created_at < s.start) s.start = e.created_at;
+      if (e.created_at > s.end) s.end = e.created_at;
+      if (e.type === 'session_start') s.meta = e.meta || {};
+      // fallback device desde pageview
+      if (!s.meta.device && e.meta && e.meta.device) s.meta.device = e.meta.device;
+    }
+    return [...map.values()];
+  };
+  const sessions = buildSessions(cur);
+  const prevSessions = buildSessions(prev);
+
+  const count = (arr, t) => arr.filter(e => e.type === t).length;
+  const uniq = (arr, f) => new Set(arr.map(f).filter(Boolean)).size;
+
+  // ---- KPIs ----
+  const durOf = (ss) => { const d = ss.filter(s => s.events.length > 1).map(s => (new Date(s.end) - new Date(s.start)) / 1000); return d.length ? d.reduce((a, b) => a + b, 0) / d.length : 0; };
+  const convSessions = (ss) => ss.filter(s => s.events.some(e => e.type === 'whatsapp_click')).length;
+  const bounce = (ss) => { if (!ss.length) return 0; const b = ss.filter(s => { const pv = s.events.filter(e => e.type === 'pageview').length; const engaged = s.events.some(e => ['product_view', 'search', 'filter_category', 'filter_subcategory', 'whatsapp_click', 'load_more'].includes(e.type)); return pv <= 1 && !engaged; }).length; return b / ss.length; };
+
+  const K = (events, ss) => ({
+    visitors: uniq(events, e => e.visitor_id),
+    sessions: ss.length,
+    pageviews: count(events, 'pageview'),
+    productViews: count(events, 'product_view'),
+    searches: count(events, 'search'),
+    wa: count(events, 'whatsapp_click'),
+    conv: ss.length ? convSessions(ss) / ss.length : 0,
+    dur: durOf(ss),
+    bounce: bounce(ss),
+  });
+  const cK = K(cur, sessions), pK = K(prev, prevSessions);
+
+  const kpis = [
+    { label: 'Visitantes únicos', v: cK.visitors, p: pK.visitors, fmt: n => n.toLocaleString('es-AR') },
+    { label: 'Sesiones', v: cK.sessions, p: pK.sessions, fmt: n => n.toLocaleString('es-AR') },
+    { label: 'Vistas de producto', v: cK.productViews, p: pK.productViews, fmt: n => n.toLocaleString('es-AR') },
+    { label: 'Consultas WhatsApp', v: cK.wa, p: pK.wa, fmt: n => n.toLocaleString('es-AR'), hot: true },
+    { label: 'Tasa de conversión', v: cK.conv, p: pK.conv, fmt: pct, isPct: true },
+    { label: 'Búsquedas', v: cK.searches, p: pK.searches, fmt: n => n.toLocaleString('es-AR') },
+    { label: 'Duración media', v: cK.dur, p: pK.dur, fmt: fmtDur, isPct: false, raw: true },
+    { label: 'Rebote', v: cK.bounce, p: pK.bounce, fmt: pct, isPct: true, invert: true },
+  ];
+  $('stats-kpis').innerHTML = kpis.map(k => {
+    let delta = '';
+    if (hasPrev) {
+      const base = k.p;
+      let d = 0, show = false;
+      if (base > 0) { d = (k.v - base) / base; show = true; }
+      else if (k.v > 0) { d = 1; show = true; }
+      if (show) {
+        const up = d >= 0;
+        const good = k.invert ? !up : up;
+        const arrow = up ? '▲' : '▼';
+        delta = `<span class="kpi-delta ${good ? 'up' : 'down'}">${arrow} ${Math.abs(d * 100).toFixed(0)}%</span>`;
+      } else {
+        delta = `<span class="kpi-delta flat">—</span>`;
+      }
+    }
+    return `<div class="kpi${k.hot ? ' kpi-hot' : ''}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-val">${k.fmt(k.v)}</div>
+      ${delta}
+    </div>`;
+  }).join('');
+
+  // ---- Timeline ----
+  renderTimeline(cur, ctx);
+
+  // ---- Funnel ----
+  const engaged = sessions.filter(s => s.events.some(e => ['product_impression', 'product_view', 'search', 'filter_category', 'filter_subcategory', 'load_more'].includes(e.type))).length;
+  const viewed = sessions.filter(s => s.events.some(e => e.type === 'product_view')).length;
+  const converted = convSessions(sessions);
+  const funnel = [
+    { label: 'Sesiones', v: sessions.length },
+    { label: 'Exploraron (buscó/filtró/vio)', v: engaged },
+    { label: 'Abrieron un producto', v: viewed },
+    { label: 'Consultaron por WhatsApp', v: converted },
+  ];
+  const fTop = funnel[0].v || 1;
+  $('stats-funnel').innerHTML = funnel.map((f, i) => {
+    const w = Math.max((f.v / fTop) * 100, 1.5);
+    const rate = i === 0 ? '' : (funnel[i - 1].v ? ` · ${((f.v / funnel[i - 1].v) * 100).toFixed(0)}% del paso anterior` : '');
+    return `<div class="funnel-row">
+      <div class="funnel-top"><span>${f.label}</span><strong>${f.v.toLocaleString('es-AR')}</strong></div>
+      <div class="funnel-track"><div class="funnel-fill" style="width:0" data-w="${w}"></div></div>
+      <div class="funnel-sub">${((f.v / fTop) * 100).toFixed(0)}% del total${rate}</div>
+    </div>`;
+  }).join('');
+  requestAnimationFrame(() => $('stats-funnel').querySelectorAll('.funnel-fill').forEach((el, i) => { el.style.transitionDelay = (i * 60) + 'ms'; el.style.width = el.dataset.w + '%'; }));
+
+  // ---- WhatsApp por producto ----
+  const waByProd = groupCount(cur.filter(e => e.type === 'whatsapp_click' && e.product_id), e => e.product_id);
+  renderRank('stats-wa-products', topN(waByProd, 8).map(([id, n]) => ({ label: prodName(id), value: n, img: prodImg(id), valTxt: n + (n === 1 ? ' consulta' : ' consultas') })), '#27AE60', 'Nadie consultó por un producto puntual todavía.');
+
+  // ---- Productos más vistos ----
+  const viewsByProd = groupCount(cur.filter(e => e.type === 'product_view' && e.product_id), e => e.product_id);
+  renderRank('stats-top-products', topN(viewsByProd, 10).map(([id, n]) => ({ label: prodName(id), value: n, img: prodImg(id), valTxt: n + (n === 1 ? ' vista' : ' vistas') })), STC[0], 'Sin vistas de producto en el período.');
+
+  // ---- Nunca vistos ----
+  const viewedSet = new Set(Object.keys(viewsByProd).map(Number));
+  const never = state.products.filter(p => !viewedSet.has(Number(p.id)));
+  $('stats-never').innerHTML = never.length
+    ? `<div class="never-count">${never.length} de ${state.products.length} productos sin una sola vista</div>` +
+      never.slice(0, 40).map(p => `<div class="mini-row"><img src="${esc(p.img)}" onerror="this.style.visibility='hidden'"><span>${esc(p.name)}</span></div>`).join('') +
+      (never.length > 40 ? `<div class="stats-more">+${never.length - 40} más</div>` : '')
+    : `<div class="empty">🎉 Todos los productos recibieron al menos una vista.</div>`;
+
+  // ---- CTR (impresiones vs vistas) ----
+  const imprByProd = groupCount(cur.filter(e => e.type === 'product_impression' && e.product_id), e => e.product_id);
+  const ctrRows = Object.keys(imprByProd).map(id => {
+    const impr = imprByProd[id], v = viewsByProd[id] || 0;
+    return { id: Number(id), impr, v, ctr: impr ? v / impr : 0 };
+  }).filter(r => r.impr >= 2).sort((a, b) => b.impr - a.impr).slice(0, 14);
+  $('stats-ctr').innerHTML = ctrRows.length
+    ? ctrRows.map(r => {
+        const w = Math.max(r.ctr * 100, 1);
+        return `<div class="rank-row">
+          <img src="${esc(prodImg(r.id))}" onerror="this.style.visibility='hidden'">
+          <div class="rank-main">
+            <div class="rank-label">${esc(prodName(r.id))}</div>
+            <div class="rank-track"><div class="rank-fill" style="width:0;background:#2E86DE" data-w="${w}"></div></div>
+          </div>
+          <div class="rank-val">${(r.ctr * 100).toFixed(0)}%<span class="rank-val-sub">${r.v}/${r.impr}</span></div>
+        </div>`;
+      }).join('')
+    : '<div class="empty">Faltan impresiones para calcular efectividad. Se acumulan a medida que los visitantes ven el catálogo.</div>';
+  animateFills('stats-ctr');
+
+  // ---- Búsquedas ----
+  const searchEvents = cur.filter(e => e.type === 'search' && e.query);
+  const byQuery = new Map();
+  for (const e of searchEvents) {
+    const q = e.query.trim().toLowerCase();
+    if (!q) continue;
+    let o = byQuery.get(q);
+    if (!o) { o = { q: e.query.trim(), n: 0, minResults: Infinity }; byQuery.set(q, o); }
+    o.n++;
+    const r = e.meta && e.meta.results != null ? Number(e.meta.results) : null;
+    if (r != null && r < o.minResults) o.minResults = r;
+  }
+  const queries = [...byQuery.values()].sort((a, b) => b.n - a.n);
+  renderRank('stats-searches', queries.slice(0, 12).map(o => ({ label: '“' + o.q + '”', value: o.n, valTxt: o.n + (o.n === 1 ? ' vez' : ' veces') })), '#8E44AD', 'Nadie usó el buscador todavía.');
+  const empties = queries.filter(o => o.minResults === 0);
+  $('stats-searches-empty').innerHTML = empties.length
+    ? empties.slice(0, 12).map(o => `<div class="mini-row warn"><span>“${esc(o.q)}”</span><b>${o.n}×</b></div>`).join('')
+    : '<div class="empty">Todas las búsquedas tuvieron resultados 👌</div>';
+
+  // ---- Doughnuts: categorías, fuentes, dispositivos, nuevos/recurrentes ----
+  const catFilters = groupCount(cur.filter(e => e.type === 'filter_category' && e.meta && e.meta.cat && e.meta.cat !== 'all'), e => e.meta.cat);
+  doughnut('chart-cats', topN(catFilters, 8).map(([k, n]) => [catLabel(k), n]));
+
+  const srcBySession = groupCount(sessions.filter(s => s.meta.source), s => s.meta.source);
+  doughnut('chart-sources', topN(srcBySession, 8));
+
+  const devBySession = groupCount(sessions.filter(s => s.meta.device), s => s.meta.device);
+  doughnut('chart-devices', Object.entries(devBySession).map(([k, n]) => [({ mobile: 'Celular', desktop: 'Computadora', tablet: 'Tablet' }[k] || k), n]));
+
+  let nuevos = 0, recurrentes = 0;
+  sessions.forEach(s => { if (s.meta.new_visitor === true) nuevos++; else if (s.meta.new_visitor === false) recurrentes++; });
+  doughnut('chart-newret', [['Nuevos', nuevos], ['Recurrentes', recurrentes]], ['#F47B20', '#0f0f0f']);
+
+  // ---- Navegadores / SO ----
+  const brBySession = groupCount(sessions.filter(s => s.meta.browser), s => s.meta.browser);
+  renderRank('stats-browsers', topN(brBySession, 6).map(([k, n]) => ({ label: k, value: n, valTxt: n + '' })), STC[2], 'Sin datos aún.');
+  const osBySession = groupCount(sessions.filter(s => s.meta.os), s => s.meta.os);
+  renderRank('stats-os', topN(osBySession, 6).map(([k, n]) => ({ label: k, value: n, valTxt: n + '' })), STC[3], 'Sin datos aún.');
+
+  // ---- Heatmap hora x día ----
+  renderHoursHeat(sessions);
+
+  // ---- Páginas ----
+  const pages = groupCount(cur.filter(e => e.type === 'pageview'), e => e.path || '—');
+  renderRank('stats-pages', topN(pages, 8).map(([k, n]) => ({ label: k === 'inicio' ? 'Inicio' : k, value: n, valTxt: n + (n === 1 ? ' vista' : ' vistas') })), STC[9], 'Sin vistas.');
+
+  // ---- Enganche ----
+  const pageTimes = cur.filter(e => e.type === 'page_time' && e.meta);
+  const avgSecs = pageTimes.length ? pageTimes.reduce((a, e) => a + (Number(e.meta.seconds) || 0), 0) / pageTimes.length : 0;
+  const scrolls = pageTimes.filter(e => e.meta.scroll != null);
+  const avgScroll = scrolls.length ? scrolls.reduce((a, e) => a + Number(e.meta.scroll), 0) / scrolls.length : 0;
+  const ppS = sessions.length ? cK.pageviews / sessions.length : 0;
+  $('stats-engagement').innerHTML = [
+    { label: 'Duración media de sesión', v: fmtDur(cK.dur) },
+    { label: 'Páginas por sesión', v: ppS.toFixed(1) },
+    { label: 'Tiempo medio en página', v: fmtDur(avgSecs) },
+    { label: 'Scroll promedio', v: avgScroll.toFixed(0) + '%' },
+  ].map(r => `<div class="eng-row"><span>${r.label}</span><strong>${r.v}</strong></div>`).join('');
+
+  // ---- Explorador de recorridos ----
+  renderSessionExplorer(sessions);
+}
+
+/* --- helpers de agregación / render --- */
+function groupCount(arr, keyFn) { const o = {}; for (const x of arr) { const k = keyFn(x); if (k == null) continue; o[k] = (o[k] || 0) + 1; } return o; }
+function topN(obj, n) { return Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n); }
+
+function renderRank(id, items, color, emptyMsg) {
+  const el = $(id);
+  if (!items.length) { el.innerHTML = `<div class="empty">${emptyMsg || 'Sin datos.'}</div>`; return; }
+  const max = Math.max(...items.map(i => i.value), 1);
+  el.innerHTML = items.map(it => {
+    const w = Math.max((it.value / max) * 100, 2);
+    return `<div class="rank-row">
+      ${it.img != null ? `<img src="${esc(it.img)}" onerror="this.style.visibility='hidden'">` : ''}
+      <div class="rank-main">
+        <div class="rank-label">${esc(it.label)}</div>
+        <div class="rank-track"><div class="rank-fill" style="width:0;background:${color}" data-w="${w}"></div></div>
+      </div>
+      <div class="rank-val">${esc(it.valTxt != null ? it.valTxt : it.value)}</div>
+    </div>`;
+  }).join('');
+  animateFills(id);
+}
+function animateFills(id) {
+  requestAnimationFrame(() => $(id).querySelectorAll('.rank-fill').forEach((el, i) => { el.style.transitionDelay = (i * 30) + 'ms'; el.style.width = el.dataset.w + '%'; }));
+}
+
+function doughnut(canvasId, entries, colors) {
+  const cv = $(canvasId); if (!cv || !window.Chart) return;
+  if (statsCharts[canvasId]) statsCharts[canvasId].destroy();
+  if (!entries.length) { const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); cv.parentElement.classList.add('is-empty'); return; }
+  cv.parentElement.classList.remove('is-empty');
+  statsCharts[canvasId] = new Chart(cv, {
+    type: 'doughnut',
+    data: { labels: entries.map(e => e[0]), datasets: [{ data: entries.map(e => e[1]), backgroundColor: colors || STC, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 }, padding: 10 } } } },
+  });
+}
+
+function renderTimeline(cur, ctx) {
+  const cv = $('chart-timeline'); if (!cv || !window.Chart) return;
+  if (statsCharts.timeline) statsCharts.timeline.destroy();
+
+  const now = ctx.now, startMs = ctx.curStartMs;
+  const spanMs = now - startMs;
+  let mode = 'day';
+  if (_statsDays === 1) mode = 'hour';
+  else if (spanMs > 130 * DAY_MS) mode = 'week';
+
+  let buckets = [], labels = [];
+  const idxOf = (t) => {
+    if (mode === 'hour') { const d = new Date(t); return d.getHours(); }
+    if (mode === 'week') return Math.floor((t - startMs) / (7 * DAY_MS));
+    return Math.floor((t - startMs) / DAY_MS);
+  };
+  let nBuckets;
+  if (mode === 'hour') nBuckets = 24;
+  else if (mode === 'week') nBuckets = Math.max(1, Math.floor(spanMs / (7 * DAY_MS)) + 1);
+  else nBuckets = Math.max(1, Math.floor(spanMs / DAY_MS) + 1);
+  nBuckets = Math.min(nBuckets, 400);
+
+  for (let i = 0; i < nBuckets; i++) {
+    if (mode === 'hour') labels.push(i + 'h');
+    else {
+      const d = new Date(startMs + i * (mode === 'week' ? 7 : 1) * DAY_MS);
+      labels.push(d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }));
+    }
+  }
+  const ses = new Array(nBuckets).fill(0), pv = new Array(nBuckets).fill(0), wa = new Array(nBuckets).fill(0);
+  for (const e of cur) {
+    const i = idxOf(new Date(e.created_at).getTime());
+    if (i < 0 || i >= nBuckets) continue;
+    if (e.type === 'session_start') ses[i]++;
+    else if (e.type === 'product_view') pv[i]++;
+    else if (e.type === 'whatsapp_click') wa[i]++;
+  }
+
+  const mk = (label, data, color) => ({ label, data, borderColor: color, backgroundColor: color + '22', fill: true, tension: 0.35, borderWidth: 2, pointRadius: nBuckets > 45 ? 0 : 3, pointHoverRadius: 5 });
+  statsCharts.timeline = new Chart(cv, {
+    type: 'line',
+    data: { labels, datasets: [ mk('Sesiones', ses, '#F47B20'), mk('Vistas de producto', pv, '#2E86DE'), mk('Consultas WhatsApp', wa, '#27AE60') ] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#eee' } }, x: { grid: { display: false }, ticks: { maxTicksLimit: 12, font: { size: 10 } } } } },
+  });
+}
+
+function renderHoursHeat(sessions) {
+  const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const grid = Array.from({ length: 7 }, () => new Array(24).fill(0));
+  sessions.forEach(s => { const d = new Date(s.start); const day = (d.getDay() + 6) % 7; grid[day][d.getHours()]++; });
+  const max = Math.max(1, ...grid.flat());
+  const hourTicks = [0, 3, 6, 9, 12, 15, 18, 21];
+  let html = '<div class="heat-grid">';
+  html += '<div class="heat-corner"></div>';
+  for (let h = 0; h < 24; h++) html += `<div class="heat-htick">${hourTicks.includes(h) ? h + 'h' : ''}</div>`;
+  for (let d = 0; d < 7; d++) {
+    html += `<div class="heat-dlabel">${days[d]}</div>`;
+    for (let h = 0; h < 24; h++) {
+      const v = grid[d][h];
+      const op = v ? (0.14 + (v / max) * 0.86).toFixed(2) : 0;
+      html += `<div class="heat-cell" title="${days[d]} ${h}:00 — ${v} sesion${v === 1 ? '' : 'es'}" style="background:${v ? `rgba(244,123,32,${op})` : '#f0f0f0'}"></div>`;
+    }
+  }
+  html += '</div>';
+  $('stats-hours').innerHTML = sessions.length ? html : '<div class="empty">Sin sesiones en el período.</div>';
+}
+
+function renderSessionExplorer(sessions) {
+  const el = $('stats-sessions');
+  const sorted = [...sessions].sort((a, b) => new Date(b.start) - new Date(a.start)).slice(0, 50);
+  if (!sorted.length) { el.innerHTML = '<div class="empty">Sin sesiones en el período.</div>'; return; }
+  el.innerHTML = sorted.map((s, i) => {
+    const dur = (new Date(s.end) - new Date(s.start)) / 1000;
+    const converted = s.events.some(e => e.type === 'whatsapp_click');
+    const nViews = s.events.filter(e => e.type === 'product_view').length;
+    const dev = DEVICE_ICON[s.meta.device] || '🌐';
+    const src = s.meta.source || '—';
+    const nEv = s.events.length;
+    return `<div class="sess">
+      <button class="sess-head" onclick="toggleSession(this)">
+        <span class="sess-caret">▸</span>
+        <span class="sess-dev">${dev}</span>
+        <span class="sess-when">${relativeTime(s.start)}</span>
+        <span class="sess-src">${esc(src)}</span>
+        <span class="sess-metrics">${nEv} acciones · ${fmtDur(dur)}${nViews ? ` · ${nViews} prod.` : ''}</span>
+        ${converted ? '<span class="sess-conv">💬 Consultó</span>' : ''}
+      </button>
+      <div class="sess-timeline" style="display:none">
+        ${s.events.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(e => {
+          const [lab, ic] = EV_LABEL[e.type] || [e.type, '•'];
+          let detail = '';
+          if (e.type === 'product_view' || e.type === 'product_impression' || e.type === 'whatsapp_click') { if (e.product_id) detail = prodName(e.product_id); }
+          else if (e.type === 'search') detail = '“' + (e.query || '') + '”' + (e.meta && e.meta.results != null ? ` (${e.meta.results} result.)` : '');
+          else if (e.type === 'filter_category') detail = catLabel(e.meta && e.meta.cat);
+          else if (e.type === 'filter_subcategory') detail = subLabel(e.meta && e.meta.subcat);
+          else if (e.type === 'outbound_click') detail = e.meta && e.meta.to || '';
+          else if (e.type === 'page_time') detail = `${e.meta.seconds || 0}s · scroll ${e.meta.scroll || 0}%`;
+          else if (e.type === 'pageview') detail = e.path === 'inicio' ? 'Inicio' : (e.path || '');
+          const time = new Date(e.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          return `<div class="tl-item"><span class="tl-ic">${ic}</span><span class="tl-lab">${lab}${detail ? ` <b>${esc(detail)}</b>` : ''}</span><span class="tl-time">${time}</span></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleSession(btn) {
+  const tl = btn.nextElementSibling;
+  const open = tl.style.display !== 'none';
+  tl.style.display = open ? 'none' : 'block';
+  btn.querySelector('.sess-caret').textContent = open ? '▸' : '▾';
+  btn.classList.toggle('open', !open);
+}
+
 /* ---------- INIT ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   initAuth();
@@ -1490,9 +1975,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (t.dataset.tab === 'destacados') renderFeatured();
     if (t.dataset.tab === 'catalogo')   renderCatalogPicker();
     if (t.dataset.tab === 'orden')      renderOrder();
+    if (t.dataset.tab === 'estadisticas') renderStats();
     if (t.dataset.tab === 'actividad')  renderHeatmap();
     if (t.dataset.tab === 'banner')     renderBannerTab();
   }));
+
+  // Estadísticas: rango de tiempo + refrescar
+  if (window.Chart) {
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+    Chart.defaults.color = '#555';
+  }
+  document.querySelectorAll('#stats-range .heat-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('#stats-range .heat-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      _statsDays = pill.dataset.days ? parseInt(pill.dataset.days) : null;
+      renderStats();
+    });
+  });
+  $('stats-refresh')?.addEventListener('click', renderStats);
 
   $('product-search').addEventListener('input', e => { state.psearch = e.target.value; renderProducts(); });
   $('product-sort')?.addEventListener('change', e => { state.psort = e.target.value; renderProducts(); });

@@ -761,6 +761,7 @@ function loadMore() {
   visibleCount    = Math.min(visibleCount + PAGE_SIZE, filtered.length);
   const newItems  = filtered.slice(from, visibleCount);
   if (newItems.length === 0) return;
+  if (window.EBTrack) window.EBTrack.loadMore(visibleCount);
 
   // Append only the new cards — existing cards never re-render or re-animate
   const tpl = document.createElement('template');
@@ -790,6 +791,7 @@ function filterByCat(cat) {
   currentCat    = cat;
   currentSubcat = 'all';
   visibleCount  = PAGE_SIZE;
+  if (window.EBTrack) window.EBTrack.filterCat(cat);
 
   document.querySelectorAll('.filter-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
   document.querySelectorAll('.cat-card').forEach(c => c.classList.toggle('active', c.dataset.cat === cat));
@@ -802,6 +804,7 @@ function filterByCat(cat) {
 function filterBySubcat(sub) {
   currentSubcat = sub;
   visibleCount  = PAGE_SIZE;
+  if (window.EBTrack) window.EBTrack.filterSubcat(sub, currentCat);
   document.querySelectorAll('.subfilter-pill').forEach(b => b.classList.toggle('active', b.dataset.subcat === sub));
   renderProducts();
 }
@@ -850,6 +853,7 @@ function initSearch() {
       searchQuery  = input.value.trim();
       visibleCount = PAGE_SIZE;
       renderProducts();
+      if (searchQuery && window.EBTrack) window.EBTrack.search(searchQuery, getFiltered().length);
     }, 150);
   });
 }
@@ -861,6 +865,8 @@ function openModal(id) {
   const p = getProductById(id);
   if (!p) return;
   if (typeof trackProductClick === 'function') trackProductClick(id);
+  window.__EB_PRODUCT_ID = id;
+  if (window.EBTrack) window.EBTrack.productView(id, { meta: { source: 'modal', name: p.name, cats: p.cats || [] } });
 
   // Fade out the current image before swapping src — prevents the old
   // product photo from being briefly visible while the new one loads.

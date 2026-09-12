@@ -56,6 +56,9 @@ function renderProduct() {
     return;
   }
 
+  window.__EB_PRODUCT_ID = product.id;
+  if (window.EBTrack) window.EBTrack.productView(product.id, { meta: { source: 'page', name: product.name, cats: product.cats || [] } });
+
   // Update meta
   document.title = `${product.name} — EBTOOLS`;
   document.getElementById('meta-desc').content = product.desc.slice(0, 160);
