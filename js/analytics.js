@@ -272,6 +272,58 @@
   window.addEventListener('beforeunload', endPage);
 
   // ---------- Arranque ----------
+  // Señales extra del dispositivo (para "exprimir" todo lo posible del navegador).
+  function deviceSignals() {
+    const s = {};
+    try { if (navigator.hardwareConcurrency) s.cores = navigator.hardwareConcurrency; } catch (_) {}
+    try { if (navigator.deviceMemory) s.memory = navigator.deviceMemory; } catch (_) {}
+    try { const c = navigator.connection; if (c && c.effectiveType) s.conn = c.effectiveType; } catch (_) {}
+    try { s.dpr = window.devicePixelRatio || 1; } catch (_) {}
+    try { s.touch = (navigator.maxTouchPoints || 0) > 0; } catch (_) {}
+    try { s.depth = (screen.colorDepth || 0); } catch (_) {}
+    try { const d = navigator.doNotTrack; if (d === '1' || d === 'yes') s.dnt = true; } catch (_) {}
+    try { s.langs = (navigator.languages || []).slice(0, 4).join(','); } catch (_) {}
+    return s;
+  }
+
+  // Normaliza la respuesta de las APIs de geolocalización por IP.
+  function geoNormalize(d, provider) {
+    if (!d) return null;
+    if (provider === 'ipwho') {
+      if (d.success === false) return null;
+      const c = d.connection || {};
+      return { ip: d.ip, country: d.country, cc: d.country_code, region: d.region, city: d.city,
+        isp: c.isp || c.org || '', asn: c.asn || null, postal: d.postal || '',
+        lat: d.latitude, lng: d.longitude, tz: (d.timezone && d.timezone.id) || '' };
+    }
+    if (d.error) return null; // ipapi.co
+    return { ip: d.ip, country: d.country_name, cc: d.country_code, region: d.region, city: d.city,
+      isp: d.org || '', asn: d.asn || null, postal: d.postal || '',
+      lat: d.latitude, lng: d.longitude, tz: d.timezone || '' };
+  }
+
+  // Geolocaliza por IP (país/provincia/ciudad/operador/IP). Cachea 12h para no
+  // gastar la cuota gratis. Emite un evento 'geo' asociado a la sesión.
+  async function geoLookup() {
+    try {
+      const raw = localStorage.getItem('eb_geo');
+      if (raw) { const o = JSON.parse(raw); if (o && o.ts && (Date.now() - o.ts < 43200000) && o.data) { track('geo', { meta: o.data }); return; } }
+    } catch (_) {}
+    const providers = [['https://ipwho.is/', 'ipwho'], ['https://ipapi.co/json/', 'ipapi']];
+    for (const [url, prov] of providers) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) continue;
+        const geo = geoNormalize(await res.json(), prov);
+        if (geo && geo.cc) {
+          try { localStorage.setItem('eb_geo', JSON.stringify({ data: geo, ts: Date.now() })); } catch (_) {}
+          track('geo', { meta: geo });
+          return;
+        }
+      } catch (_) {}
+    }
+  }
+
   function boot() {
     if (IS_NEW_SESSION) {
       const r = referrerInfo();
@@ -285,8 +337,9 @@
           viewport: (window.innerWidth || 0) + 'x' + (window.innerHeight || 0),
           lang: (navigator.language || '').slice(0, 12),
           tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 40),
-        }, utmInfo()),
+        }, deviceSignals(), utmInfo()),
       });
+      geoLookup();
     }
     // Vista de página en cada carga (lleva el device para poder segmentar aunque
     // la session_start haya quedado fuera de la ventana consultada).

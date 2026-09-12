@@ -7,7 +7,7 @@
   <title>Panel · EBTOOLS</title>
   <link rel="icon" href="assets/icon.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/panel.css?v=13">
+  <link rel="stylesheet" href="css/panel.css?v=14">
 </head>
 <body>
 
@@ -266,6 +266,32 @@
           <div id="stats-hours" class="stats-hours"></div>
         </div>
 
+        <!-- Geografía -->
+        <div class="stats-grid-3">
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>🌎 Países</h3></div>
+            <div id="stats-countries" class="stats-rank"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Provincias / Regiones</h3></div>
+            <div id="stats-regions" class="stats-rank"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Ciudades</h3></div>
+            <div id="stats-cities" class="stats-rank"></div>
+          </div>
+        </div>
+        <div class="stats-grid-2">
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Operadores / ISP</h3><span class="stats-sub">proveedor de internet</span></div>
+            <div id="stats-isp" class="stats-rank"></div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-head"><h3>Direcciones IP</h3><span class="stats-sub">visitas por IP</span></div>
+            <div id="stats-ips" class="stats-ips"></div>
+          </div>
+        </div>
+
         <!-- Páginas + scroll -->
         <div class="stats-grid-2">
           <div class="stats-card">
@@ -358,7 +384,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="js/config.js?v=13"></script>
-<script src="js/panel.js?v=13"></script>
+<script src="js/config.js?v=14"></script>
+<script src="js/panel.js?v=14"></script>
 </body>
 </html>

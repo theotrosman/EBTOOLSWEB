@@ -1500,9 +1500,16 @@ const EV_LABEL = {
   whatsapp_click:     ['Consultó por WhatsApp', '💬'],
   outbound_click:     ['Salió del sitio', '↗️'],
   page_time:          ['Tiempo en la página', '⏱️'],
+  geo:                ['Ubicación', '📍'],
 };
 
 const DEVICE_ICON = { mobile:'📱', desktop:'💻', tablet:'📲' };
+
+// Código de país ISO-2 -> emoji de bandera.
+function flag(cc) {
+  if (!cc || cc.length !== 2) return '🏳️';
+  return cc.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+}
 
 function prodName(id) {
   const p = state.products.find(x => Number(x.id) === Number(id));
@@ -1619,7 +1626,8 @@ function computeAndRender(cur, prev, hasPrev, ctx) {
       s.events.push(e);
       if (e.created_at < s.start) s.start = e.created_at;
       if (e.created_at > s.end) s.end = e.created_at;
-      if (e.type === 'session_start') s.meta = e.meta || {};
+      if (e.type === 'session_start') s.meta = Object.assign(s.meta, e.meta || {});
+      if (e.type === 'geo') s.meta = Object.assign(s.meta, e.meta || {}); // país/provincia/ciudad/IP/ISP
       // fallback device desde pageview
       if (!s.meta.device && e.meta && e.meta.device) s.meta.device = e.meta.device;
     }
@@ -1804,8 +1812,54 @@ function computeAndRender(cur, prev, hasPrev, ctx) {
     { label: 'Scroll promedio', v: avgScroll.toFixed(0) + '%' },
   ].map(r => `<div class="eng-row"><span>${r.label}</span><strong>${r.v}</strong></div>`).join('');
 
+  // ---- Geografía ----
+  renderGeo(sessions);
+
   // ---- Explorador de recorridos ----
   renderSessionExplorer(sessions);
+}
+
+function renderGeo(sessions) {
+  const geoS = sessions.filter(s => s.meta && (s.meta.cc || s.meta.country || s.meta.ip));
+
+  // Países (con bandera)
+  const byCountry = {};
+  geoS.forEach(s => { const k = s.meta.country || s.meta.cc; if (!k) return; (byCountry[k] = byCountry[k] || { n: 0, cc: s.meta.cc }).n++; });
+  renderRank('stats-countries',
+    Object.entries(byCountry).sort((a, b) => b[1].n - a[1].n).slice(0, 10).map(([name, o]) => ({ label: flag(o.cc) + '  ' + name, value: o.n, valTxt: o.n + (o.n === 1 ? ' visita' : ' visitas') })),
+    STC[0], 'Todavía no hay datos de ubicación. Se cargan con cada visita nueva.');
+
+  // Provincias / regiones
+  const byRegion = groupCount(geoS.filter(s => s.meta.region), s => s.meta.region);
+  renderRank('stats-regions', topN(byRegion, 12).map(([k, n]) => ({ label: k, value: n, valTxt: n + '' })), STC[2], 'Sin datos de provincia aún.');
+
+  // Ciudades
+  const byCity = groupCount(geoS.filter(s => s.meta.city), s => s.meta.city);
+  renderRank('stats-cities', topN(byCity, 12).map(([k, n]) => ({ label: k, value: n, valTxt: n + '' })), STC[3], 'Sin datos de ciudad aún.');
+
+  // Operadores / ISP
+  const byIsp = groupCount(geoS.filter(s => s.meta.isp), s => s.meta.isp);
+  renderRank('stats-isp', topN(byIsp, 10).map(([k, n]) => ({ label: k, value: n, valTxt: n + '' })), STC[4], 'Sin datos de operador aún.');
+
+  // Direcciones IP (tabla): visitas por IP, ubicación y última vez
+  const ipMap = new Map();
+  geoS.filter(s => s.meta.ip).forEach(s => {
+    let o = ipMap.get(s.meta.ip);
+    if (!o) { o = { ip: s.meta.ip, n: 0, last: s.start, cc: s.meta.cc, city: s.meta.city, country: s.meta.country, isp: s.meta.isp }; ipMap.set(s.meta.ip, o); }
+    o.n++;
+    if (s.start > o.last) o.last = s.start;
+  });
+  const ips = [...ipMap.values()].sort((a, b) => b.n - a.n).slice(0, 25);
+  $('stats-ips').innerHTML = ips.length
+    ? `<table class="ip-table"><thead><tr><th>IP</th><th>Ubicación</th><th>Operador</th><th class="ip-num">Visitas</th><th>Última</th></tr></thead><tbody>` +
+      ips.map(o => `<tr>
+        <td class="ip-addr">${esc(o.ip)}</td>
+        <td>${flag(o.cc)} ${esc([o.city, o.country].filter(Boolean).join(', ') || '—')}</td>
+        <td class="ip-isp">${esc(o.isp || '—')}</td>
+        <td class="ip-num">${o.n}</td>
+        <td class="ip-when">${esc(relativeTime(o.last))}</td>
+      </tr>`).join('') + '</tbody></table>'
+    : '<div class="empty">Todavía no se registraron IPs. Aparecen con cada visita nueva.</div>';
 }
 
 /* --- helpers de agregación / render --- */
@@ -1925,18 +1979,32 @@ function renderSessionExplorer(sessions) {
     const nViews = s.events.filter(e => e.type === 'product_view').length;
     const dev = DEVICE_ICON[s.meta.device] || '🌐';
     const src = s.meta.source || '—';
-    const nEv = s.events.length;
+    const actions = s.events.filter(e => e.type !== 'geo' && e.type !== 'session_start');
+    const nEv = actions.length;
+    const m = s.meta || {};
+    const place = [m.city, m.region, m.country].filter(Boolean).join(', ');
+    const geoTxt = (m.cc || place) ? `${flag(m.cc)} ${esc(place || m.country || '')}` : '';
+    const techBits = [
+      m.browser, m.os,
+      m.cores ? m.cores + ' núcleos' : null,
+      m.memory ? m.memory + ' GB RAM' : null,
+      m.conn ? m.conn.toUpperCase() : null,
+      m.screen, m.isp,
+      m.ip ? 'IP ' + m.ip : null,
+    ].filter(Boolean).map(esc).join(' · ');
     return `<div class="sess">
       <button class="sess-head" onclick="toggleSession(this)">
         <span class="sess-caret">▸</span>
         <span class="sess-dev">${dev}</span>
         <span class="sess-when">${relativeTime(s.start)}</span>
+        ${geoTxt ? `<span class="sess-geo">${geoTxt}</span>` : ''}
         <span class="sess-src">${esc(src)}</span>
         <span class="sess-metrics">${nEv} acciones · ${fmtDur(dur)}${nViews ? ` · ${nViews} prod.` : ''}</span>
         ${converted ? '<span class="sess-conv">💬 Consultó</span>' : ''}
       </button>
       <div class="sess-timeline" style="display:none">
-        ${s.events.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(e => {
+        ${techBits ? `<div class="sess-detail">${techBits}</div>` : ''}
+        ${actions.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(e => {
           const [lab, ic] = EV_LABEL[e.type] || [e.type, '•'];
           let detail = '';
           if (e.type === 'product_view' || e.type === 'product_impression' || e.type === 'whatsapp_click') { if (e.product_id) detail = prodName(e.product_id); }
