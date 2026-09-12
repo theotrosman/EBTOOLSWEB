@@ -472,3 +472,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
 .ip-isp{color:var(--g700);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ip-num{text-align:right;font-weight:800}
 .ip-when{color:var(--g500);white-space:nowrap}
+
+/* Recorrido: agrupado de impresiones + desglose */
+.tl-group .tl-lab i{color:var(--g500);font-style:normal;font-weight:600}
+.tl-toggle{background:none;border:none;color:var(--orange);font-weight:700;font-size:.74rem;padding:0 0 0 6px;cursor:pointer;white-space:nowrap}
+.tl-toggle:hover{text-decoration:underline}
+.tl-breakdown{padding:2px 0 8px 29px}
+.bd-row{font-size:.78rem;color:var(--g700);padding:3px 0}
+.bd-row em{color:var(--orange);font-style:normal;font-weight:700;font-size:.72rem}

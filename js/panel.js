@@ -1969,18 +1969,48 @@ function renderHoursHeat(sessions) {
   $('stats-hours').innerHTML = sessions.length ? html : '<div class="empty">Sin sesiones en el período.</div>';
 }
 
+const hhmmss = (iso) => new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+// Arma el recorrido "legible": colapsa las impresiones consecutivas
+// ("vio productos en el catálogo") en una sola línea con desglose, y deja las
+// aperturas reales ("abrió") y demás acciones como líneas propias.
+function buildReadableTimeline(events) {
+  const ordered = events.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const openedIds = new Set(ordered.filter(e => e.type === 'product_view' && e.product_id).map(e => Number(e.product_id)));
+  const rows = [];
+  let run = null;
+  const flushRun = () => {
+    if (!run) return;
+    const ids = [...new Set(run.ids)];
+    rows.push({ kind: 'impr', ids, time: run.time });
+    run = null;
+  };
+  for (const e of ordered) {
+    if (e.type === 'geo' || e.type === 'session_start') continue;
+    if (e.type === 'product_impression') {
+      if (!run) run = { ids: [], time: e.created_at };
+      if (e.product_id) run.ids.push(Number(e.product_id));
+      run.lastTime = e.created_at;
+      continue;
+    }
+    flushRun();
+    rows.push({ kind: 'event', e });
+  }
+  flushRun();
+  return { rows, openedIds };
+}
+
 function renderSessionExplorer(sessions) {
   const el = $('stats-sessions');
   const sorted = [...sessions].sort((a, b) => new Date(b.start) - new Date(a.start)).slice(0, 50);
   if (!sorted.length) { el.innerHTML = '<div class="empty">Sin sesiones en el período.</div>'; return; }
-  el.innerHTML = sorted.map((s, i) => {
+  el.innerHTML = sorted.map((s) => {
     const dur = (new Date(s.end) - new Date(s.start)) / 1000;
     const converted = s.events.some(e => e.type === 'whatsapp_click');
-    const nViews = s.events.filter(e => e.type === 'product_view').length;
+    const seen = new Set(s.events.filter(e => e.type === 'product_impression' && e.product_id).map(e => Number(e.product_id)));
+    const opened = new Set(s.events.filter(e => e.type === 'product_view' && e.product_id).map(e => Number(e.product_id)));
     const dev = DEVICE_ICON[s.meta.device] || '🌐';
     const src = s.meta.source || '—';
-    const actions = s.events.filter(e => e.type !== 'geo' && e.type !== 'session_start');
-    const nEv = actions.length;
     const m = s.meta || {};
     const place = [m.city, m.region, m.country].filter(Boolean).join(', ');
     const geoTxt = (m.cc || place) ? `${flag(m.cc)} ${esc(place || m.country || '')}` : '';
@@ -1992,6 +2022,48 @@ function renderSessionExplorer(sessions) {
       m.screen, m.isp,
       m.ip ? 'IP ' + m.ip : null,
     ].filter(Boolean).map(esc).join(' · ');
+
+    // Métricas claras: cuántos productos vio vs. cuántos abrió
+    const metricBits = [];
+    if (seen.size) metricBits.push(`👁️ ${seen.size} vistos`);
+    if (opened.size) metricBits.push(`🔍 ${opened.size} abiertos`);
+    metricBits.push(fmtDur(dur));
+
+    const { rows, openedIds } = buildReadableTimeline(s.events);
+
+    const timelineHTML = rows.map(r => {
+      if (r.kind === 'impr') {
+        const n = r.ids.length;
+        if (!n) return '';
+        const openedInGroup = r.ids.filter(id => openedIds.has(id)).length;
+        const tail = openedInGroup
+          ? ` · abrió ${openedInGroup}`
+          : ' · <i>no abrió ninguno</i>';
+        const breakdown = r.ids.map(id => {
+          const op = openedIds.has(id);
+          return `<div class="bd-row">${op ? '🔍' : '👁️'} ${esc(prodName(id))}${op ? ' <em>(lo abrió)</em>' : ''}</div>`;
+        }).join('');
+        return `<div class="tl-item tl-group">
+            <span class="tl-ic">👁️</span>
+            <span class="tl-lab">Vio <b>${n} producto${n === 1 ? '' : 's'}</b> en el catálogo${tail}
+              <button type="button" class="tl-toggle" onclick="toggleBreakdown(this)">ver desglose ▾</button></span>
+            <span class="tl-time">${hhmmss(r.time)}</span>
+          </div>
+          <div class="tl-breakdown" style="display:none">${breakdown}</div>`;
+      }
+      const e = r.e;
+      const [lab, ic] = EV_LABEL[e.type] || [e.type, '•'];
+      let detail = '';
+      if (e.type === 'product_view' || e.type === 'whatsapp_click') { if (e.product_id) detail = prodName(e.product_id); }
+      else if (e.type === 'search') detail = '“' + (e.query || '') + '”' + (e.meta && e.meta.results != null ? ` (${e.meta.results} result.)` : '');
+      else if (e.type === 'filter_category') detail = catLabel(e.meta && e.meta.cat);
+      else if (e.type === 'filter_subcategory') detail = subLabel(e.meta && e.meta.subcat);
+      else if (e.type === 'outbound_click') detail = e.meta && e.meta.to || '';
+      else if (e.type === 'page_time') detail = `${e.meta.seconds || 0}s · scroll ${e.meta.scroll || 0}%`;
+      else if (e.type === 'pageview') detail = e.path === 'inicio' ? 'Inicio' : (e.path || '');
+      return `<div class="tl-item"><span class="tl-ic">${ic}</span><span class="tl-lab">${lab}${detail ? ` <b>${esc(detail)}</b>` : ''}</span><span class="tl-time">${hhmmss(e.created_at)}</span></div>`;
+    }).join('');
+
     return `<div class="sess">
       <button class="sess-head" onclick="toggleSession(this)">
         <span class="sess-caret">▸</span>
@@ -1999,27 +2071,23 @@ function renderSessionExplorer(sessions) {
         <span class="sess-when">${relativeTime(s.start)}</span>
         ${geoTxt ? `<span class="sess-geo">${geoTxt}</span>` : ''}
         <span class="sess-src">${esc(src)}</span>
-        <span class="sess-metrics">${nEv} acciones · ${fmtDur(dur)}${nViews ? ` · ${nViews} prod.` : ''}</span>
+        <span class="sess-metrics">${metricBits.join(' · ')}</span>
         ${converted ? '<span class="sess-conv">💬 Consultó</span>' : ''}
       </button>
       <div class="sess-timeline" style="display:none">
         ${techBits ? `<div class="sess-detail">${techBits}</div>` : ''}
-        ${actions.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(e => {
-          const [lab, ic] = EV_LABEL[e.type] || [e.type, '•'];
-          let detail = '';
-          if (e.type === 'product_view' || e.type === 'product_impression' || e.type === 'whatsapp_click') { if (e.product_id) detail = prodName(e.product_id); }
-          else if (e.type === 'search') detail = '“' + (e.query || '') + '”' + (e.meta && e.meta.results != null ? ` (${e.meta.results} result.)` : '');
-          else if (e.type === 'filter_category') detail = catLabel(e.meta && e.meta.cat);
-          else if (e.type === 'filter_subcategory') detail = subLabel(e.meta && e.meta.subcat);
-          else if (e.type === 'outbound_click') detail = e.meta && e.meta.to || '';
-          else if (e.type === 'page_time') detail = `${e.meta.seconds || 0}s · scroll ${e.meta.scroll || 0}%`;
-          else if (e.type === 'pageview') detail = e.path === 'inicio' ? 'Inicio' : (e.path || '');
-          const time = new Date(e.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-          return `<div class="tl-item"><span class="tl-ic">${ic}</span><span class="tl-lab">${lab}${detail ? ` <b>${esc(detail)}</b>` : ''}</span><span class="tl-time">${time}</span></div>`;
-        }).join('')}
+        ${timelineHTML}
       </div>
     </div>`;
   }).join('');
+}
+function toggleBreakdown(btn) {
+  const item = btn.closest('.tl-item');
+  const bd = item && item.nextElementSibling;
+  if (!bd || !bd.classList.contains('tl-breakdown')) return;
+  const open = bd.style.display !== 'none';
+  bd.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? 'ver desglose ▾' : 'ocultar ▴';
 }
 function toggleSession(btn) {
   const tl = btn.nextElementSibling;
