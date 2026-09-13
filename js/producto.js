@@ -62,6 +62,7 @@ function renderProduct() {
   // Update meta
   document.title = `${product.name} — EBTOOLS`;
   document.getElementById('meta-desc').content = product.desc.slice(0, 160);
+  applyProductSEO(product);
 
   // Breadcrumb
   document.getElementById('breadcrumb-cat').textContent  = getCatLabel(primaryCat(product));
@@ -86,6 +87,55 @@ function renderProduct() {
 
   // Related
   renderRelated(product);
+}
+
+/* ─── SEO: OG/Twitter dinámicos + datos estructurados del producto ─── */
+function applyProductSEO(product) {
+  const url = `https://ebtools.com.ar/producto?id=${product.id}`;
+  const desc = (product.short || product.desc || '').slice(0, 200);
+  const img = product.img || 'https://ebtools.com.ar/assets/logo.png';
+  const title = `${product.name} — EBTOOLS`;
+
+  const setAttr = (id, attr, val) => { const el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
+  setAttr('canonical-link', 'href', url);
+  setAttr('og-title', 'content', title);
+  setAttr('og-desc', 'content', desc);
+  setAttr('og-url', 'content', url);
+  setAttr('og-image', 'content', img);
+  setAttr('tw-title', 'content', title);
+  setAttr('tw-desc', 'content', desc);
+  setAttr('tw-image', 'content', img);
+
+  const cats = (typeof productCatLabels === 'function') ? productCatLabels(product).join(', ') : '';
+  const ld = {
+    '@context': 'https://schema.org/',
+    '@graph': [
+      {
+        '@type': 'Product',
+        '@id': url + '#product',
+        name: product.name,
+        image: [img].concat(Array.isArray(product.images) ? product.images.filter(Boolean) : []),
+        description: product.desc || product.short || '',
+        sku: 'EBT-' + product.id,
+        category: cats,
+        brand: { '@type': 'Brand', name: 'EBTOOLS' },
+        manufacturer: { '@type': 'Organization', name: 'EBTOOLS' },
+        url: url,
+        itemCondition: 'https://schema.org/NewCondition'
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://ebtools.com.ar/' },
+          { '@type': 'ListItem', position: 2, name: 'Productos', item: 'https://ebtools.com.ar/#productos' },
+          { '@type': 'ListItem', position: 3, name: (typeof getCatLabel === 'function' ? getCatLabel(primaryCat(product)) : ''), item: url },
+          { '@type': 'ListItem', position: 4, name: product.name, item: url }
+        ]
+      }
+    ]
+  };
+  const tag = document.getElementById('ld-product');
+  if (tag) tag.textContent = JSON.stringify(ld);
 }
 
 /* ========== CAROUSEL (fotos + videos integrados) ========== */

@@ -846,6 +846,17 @@ function buildSubcatPills() {
 function initSearch() {
   const input = document.getElementById('search-input');
   if (!input) return;
+
+  // Deep-link de búsqueda: ebtools.com.ar/?q=compresor prefiltra el catálogo
+  // (habilita el SearchAction de Schema.org y permite compartir búsquedas).
+  try {
+    const q0 = new URLSearchParams(location.search).get('q');
+    if (q0 && q0.trim()) {
+      input.value = q0.trim();
+      searchQuery = q0.trim();
+    }
+  } catch (_) {}
+
   let debounce, trackT;
   input.addEventListener('input', () => {
     clearTimeout(debounce);
