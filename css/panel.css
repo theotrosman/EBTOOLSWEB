@@ -488,3 +488,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
 .stats-card.is-collapsed{padding-bottom:18px}
 .stats-card.is-collapsed .stats-card-body{display:none}
 .stats-card.is-collapsed .stats-card-head{margin-bottom:0}
+
+/* Botón ✕ para borrar una búsqueda basura */
+.row-del{flex-shrink:0;width:24px;height:24px;border:none;background:none;color:var(--g300);font-size:1rem;line-height:1;border-radius:6px;cursor:pointer;transition:var(--t);display:flex;align-items:center;justify-content:center}
+.row-del:hover{background:#fdecea;color:#c0392b}
+.stats-rank-warn .rank-label{color:#a04000}

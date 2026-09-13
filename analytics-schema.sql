@@ -47,7 +47,14 @@ create policy "analytics admin read"
   to authenticated
   using (true);
 
--- (No se crean políticas de UPDATE/DELETE: quedan prohibidas desde el cliente.)
+-- DELETE solo para el admin logueado (para borrar búsquedas basura desde el panel).
+drop policy if exists "analytics admin delete" on analytics_events;
+create policy "analytics admin delete"
+  on analytics_events for delete
+  to authenticated
+  using (true);
+
+-- (No se crea política de UPDATE: los eventos no se editan.)
 
 -- =====================================================================
 --  OPCIONAL — Limpieza automática de eventos viejos (retención 12 meses).

@@ -1388,6 +1388,7 @@ async function afterSave(error, okMsg) {
 const DAY_MS = 86400000;
 let _statsDays = 7;              // ventana seleccionada (null = siempre)
 let _statsLoading = false;
+let _statsCur = [];              // eventos de la ventana actual (para borrar ruido)
 const statsCharts = {};          // instancias de Chart.js a destruir en cada render
 const STC = ['#F47B20','#0f0f0f','#2E86DE','#27AE60','#8E44AD','#E74C3C','#16A085','#F1C40F','#7F8C8D','#2980B9','#D35400','#C0392B'];
 
@@ -1438,7 +1439,7 @@ async function statsFetch(sinceISO, cap = 50000) {
   let from = 0; const PAGE = 1000;
   while (out.length < cap) {
     let q = sb.from('analytics_events')
-      .select('created_at,session_id,visitor_id,type,path,product_id,query,meta')
+      .select('id,created_at,session_id,visitor_id,type,path,product_id,query,meta')
       .order('created_at', { ascending: true })
       .range(from, from + PAGE - 1);
     if (sinceISO) q = q.gte('created_at', sinceISO);
@@ -1520,6 +1521,7 @@ async function renderStats() {
 }
 
 function computeAndRender(cur, prev, hasPrev, ctx) {
+  _statsCur = cur;
   // ---- Agrupar por sesión (para device/fuente/duración/recorrido) ----
   const buildSessions = (events) => {
     const map = new Map();
@@ -1677,18 +1679,16 @@ function computeAndRender(cur, prev, hasPrev, ctx) {
     kept.forEach(n => {
       const ev = evs.find(e => e.query.trim().toLowerCase() === n);
       let o = byNorm.get(n);
-      if (!o) { o = { q: ev.query.trim(), visitors: new Set(), sessions: new Set(), minResults: resByNorm[n] == null ? Infinity : resByNorm[n] }; byNorm.set(n, o); }
+      if (!o) { o = { norm: n, q: ev.query.trim(), visitors: new Set(), sessions: new Set(), minResults: resByNorm[n] == null ? Infinity : resByNorm[n] }; byNorm.set(n, o); }
       o.visitors.add(ev.visitor_id);
       o.sessions.add(sid);
     });
   }
   const queries = [...byNorm.values()].sort((a, b) => b.visitors.size - a.visitors.size || b.sessions.size - a.sessions.size);
   const vtxt = v => v + (v === 1 ? ' visitante' : ' visitantes');
-  renderRank('stats-searches', queries.slice(0, 12).map(o => ({ label: '“' + o.q + '”', value: o.visitors.size, valTxt: vtxt(o.visitors.size) })), '#8E44AD', 'Nadie usó el buscador todavía.');
+  renderSearchRank('stats-searches', queries.slice(0, 15).map(o => ({ norm: o.norm, label: '“' + o.q + '”', value: o.visitors.size, valTxt: vtxt(o.visitors.size) })), '#8E44AD', 'Nadie usó el buscador todavía.');
   const empties = queries.filter(o => o.minResults === 0).sort((a, b) => b.visitors.size - a.visitors.size);
-  $('stats-searches-empty').innerHTML = empties.length
-    ? empties.slice(0, 12).map(o => `<div class="mini-row warn"><span>“${esc(o.q)}”</span><b>${vtxt(o.visitors.size)}</b></div>`).join('')
-    : '<div class="empty">Todas las búsquedas tuvieron resultados 👌</div>';
+  renderSearchRank('stats-searches-empty', empties.slice(0, 15).map(o => ({ norm: o.norm, label: '“' + o.q + '”', value: o.visitors.size, valTxt: vtxt(o.visitors.size) })), '#E74C3C', 'Todas las búsquedas tuvieron resultados 👌');
 
   // ---- Doughnuts: categorías, fuentes, dispositivos, nuevos/recurrentes ----
   const catFilters = groupCount(cur.filter(e => e.type === 'filter_category' && e.meta && e.meta.cat && e.meta.cat !== 'all'), e => e.meta.cat);
@@ -1806,6 +1806,54 @@ function renderRank(id, items, color, emptyMsg) {
 }
 function animateFills(id) {
   requestAnimationFrame(() => $(id).querySelectorAll('.rank-fill').forEach((el, i) => { el.style.transitionDelay = (i * 30) + 'ms'; el.style.width = el.dataset.w + '%'; }));
+}
+
+// Igual que renderRank pero con una "✕" por fila para borrar búsquedas basura.
+function renderSearchRank(id, items, color, emptyMsg) {
+  const el = $(id);
+  if (!items.length) { el.innerHTML = `<div class="empty">${emptyMsg || 'Sin datos.'}</div>`; return; }
+  const max = Math.max(...items.map(i => i.value), 1);
+  el.innerHTML = items.map(it => {
+    const w = Math.max((it.value / max) * 100, 2);
+    return `<div class="rank-row">
+      <div class="rank-main">
+        <div class="rank-label">${esc(it.label)}</div>
+        <div class="rank-track"><div class="rank-fill" style="width:0;background:${color}" data-w="${w}"></div></div>
+      </div>
+      <div class="rank-val">${esc(it.valTxt != null ? it.valTxt : it.value)}</div>
+      <button type="button" class="row-del" data-norm="${esc(it.norm)}" title="Borrar esta búsqueda (es ruido)">✕</button>
+    </div>`;
+  }).join('');
+  animateFills(id);
+}
+
+// Borra de la base TODOS los eventos de esa búsqueda (y el tipeo que llevó a
+// ella en la misma visita). Requiere la política de DELETE en Supabase.
+async function deleteSearchTerm(norm) {
+  if (norm == null) return;
+  if (!confirm(`¿Borrar la búsqueda “${norm}” de las estadísticas?\n\nSe elimina de la base y no se puede deshacer.`)) return;
+
+  // Sesiones donde aparece ese término; borramos ese término y sus prefijos
+  // (el tipeo progresivo) dentro de esas mismas sesiones.
+  const hitSessions = new Set(_statsCur
+    .filter(e => e.type === 'search' && e.query && e.query.trim().toLowerCase() === norm)
+    .map(e => e.session_id));
+  const ids = _statsCur.filter(e => {
+    if (e.type !== 'search' || !e.query || e.id == null) return false;
+    const n = e.query.trim().toLowerCase();
+    if (n === norm) return true;
+    return norm.startsWith(n) && hitSessions.has(e.session_id);
+  }).map(e => e.id);
+
+  if (!ids.length) { toast('No se encontró esa búsqueda.', true); return; }
+
+  const { error } = await sb.from('analytics_events').delete().in('id', ids);
+  if (error) {
+    toast('No se pudo borrar. Falta la política de DELETE en Supabase (ver analytics-schema.sql).', true);
+    return;
+  }
+  toast(`Búsqueda “${norm}” borrada (${ids.length} evento${ids.length === 1 ? '' : 's'}).`);
+  renderStats(); // refetch limpio (mantiene las comparativas)
 }
 
 function doughnut(canvasId, entries, colors) {
@@ -2070,6 +2118,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   $('stats-refresh')?.addEventListener('click', renderStats);
+  // Borrar una búsqueda basura desde su "✕"
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.row-del');
+    if (b && b.dataset.norm != null) deleteSearchTerm(b.dataset.norm);
+  });
 
   $('product-search').addEventListener('input', e => { state.psearch = e.target.value; renderProducts(); });
   $('product-sort')?.addEventListener('change', e => { state.psort = e.target.value; renderProducts(); });
