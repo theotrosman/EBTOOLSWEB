@@ -1656,23 +1656,38 @@ function computeAndRender(cur, prev, hasPrev, ctx) {
     : '<div class="empty">Faltan impresiones para calcular efectividad. Se acumulan a medida que los visitantes ven el catálogo.</div>';
   animateFills('stats-ctr');
 
-  // ---- Búsquedas ----
-  const searchEvents = cur.filter(e => e.type === 'search' && e.query);
-  const byQuery = new Map();
-  for (const e of searchEvents) {
-    const q = e.query.trim().toLowerCase();
-    if (!q) continue;
-    let o = byQuery.get(q);
-    if (!o) { o = { q: e.query.trim(), n: 0, minResults: Infinity }; byQuery.set(q, o); }
-    o.n++;
+  // ---- Búsquedas (contadas por VISITANTE único, colapsando el tipeo progresivo) ----
+  const searchEvents = cur.filter(e => e.type === 'search' && e.query && e.query.trim());
+  // Mínimo de resultados por término (para detectar "sin resultados")
+  const resByNorm = {};
+  searchEvents.forEach(e => {
+    const n = e.query.trim().toLowerCase();
     const r = e.meta && e.meta.results != null ? Number(e.meta.results) : null;
-    if (r != null && r < o.minResults) o.minResults = r;
+    if (r != null) resByNorm[n] = Math.min(resByNorm[n] == null ? Infinity : resByNorm[n], r);
+  });
+  // Por sesión, descartar los términos que son prefijo de otro más largo del mismo
+  // visitante (es la misma persona tipeando: "lap" "lape" "laper" -> "laper…").
+  const bySess = {};
+  searchEvents.forEach(e => { (bySess[e.session_id] = bySess[e.session_id] || []).push(e); });
+  const byNorm = new Map(); // norm -> {q, visitors:Set, sessions:Set, minResults}
+  for (const sid in bySess) {
+    const evs = bySess[sid];
+    const norms = [...new Set(evs.map(e => e.query.trim().toLowerCase()))];
+    const kept = norms.filter(n => !norms.some(o => o !== n && o.startsWith(n) && o.length > n.length));
+    kept.forEach(n => {
+      const ev = evs.find(e => e.query.trim().toLowerCase() === n);
+      let o = byNorm.get(n);
+      if (!o) { o = { q: ev.query.trim(), visitors: new Set(), sessions: new Set(), minResults: resByNorm[n] == null ? Infinity : resByNorm[n] }; byNorm.set(n, o); }
+      o.visitors.add(ev.visitor_id);
+      o.sessions.add(sid);
+    });
   }
-  const queries = [...byQuery.values()].sort((a, b) => b.n - a.n);
-  renderRank('stats-searches', queries.slice(0, 12).map(o => ({ label: '“' + o.q + '”', value: o.n, valTxt: o.n + (o.n === 1 ? ' vez' : ' veces') })), '#8E44AD', 'Nadie usó el buscador todavía.');
-  const empties = queries.filter(o => o.minResults === 0);
+  const queries = [...byNorm.values()].sort((a, b) => b.visitors.size - a.visitors.size || b.sessions.size - a.sessions.size);
+  const vtxt = v => v + (v === 1 ? ' visitante' : ' visitantes');
+  renderRank('stats-searches', queries.slice(0, 12).map(o => ({ label: '“' + o.q + '”', value: o.visitors.size, valTxt: vtxt(o.visitors.size) })), '#8E44AD', 'Nadie usó el buscador todavía.');
+  const empties = queries.filter(o => o.minResults === 0).sort((a, b) => b.visitors.size - a.visitors.size);
   $('stats-searches-empty').innerHTML = empties.length
-    ? empties.slice(0, 12).map(o => `<div class="mini-row warn"><span>“${esc(o.q)}”</span><b>${o.n}×</b></div>`).join('')
+    ? empties.slice(0, 12).map(o => `<div class="mini-row warn"><span>“${esc(o.q)}”</span><b>${vtxt(o.visitors.size)}</b></div>`).join('')
     : '<div class="empty">Todas las búsquedas tuvieron resultados 👌</div>';
 
   // ---- Doughnuts: categorías, fuentes, dispositivos, nuevos/recurrentes ----
@@ -1720,6 +1735,9 @@ function computeAndRender(cur, prev, hasPrev, ctx) {
 
   // ---- Explorador de recorridos ----
   renderSessionExplorer(sessions);
+
+  // Respetar tarjetas que el admin haya ocultado
+  applyHiddenStatsCards();
 }
 
 function renderGeo(sessions) {
@@ -1984,6 +2002,26 @@ function renderSessionExplorer(sessions) {
     </div>`;
   }).join('');
 }
+/* ---- Ocultar / mostrar tarjetas de estadísticas (persistente) ---- */
+function getHiddenStatsCards() {
+  try { return new Set(JSON.parse(localStorage.getItem('eb_stats_hidden') || '[]')); } catch (_) { return new Set(); }
+}
+function applyHiddenStatsCards() {
+  const hidden = getHiddenStatsCards();
+  document.querySelectorAll('.stats-card[data-hideable]').forEach(card => {
+    const on = hidden.has(card.id);
+    card.classList.toggle('is-collapsed', on);
+    const btn = card.querySelector('.stats-hide');
+    if (btn) btn.textContent = on ? 'Mostrar' : 'Ocultar';
+  });
+}
+function toggleStatsCard(id) {
+  const set = getHiddenStatsCards();
+  if (set.has(id)) set.delete(id); else set.add(id);
+  try { localStorage.setItem('eb_stats_hidden', JSON.stringify([...set])); } catch (_) {}
+  applyHiddenStatsCards();
+}
+
 function toggleBreakdown(btn) {
   const item = btn.closest('.tl-item');
   const bd = item && item.nextElementSibling;

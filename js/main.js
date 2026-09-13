@@ -846,15 +846,21 @@ function buildSubcatPills() {
 function initSearch() {
   const input = document.getElementById('search-input');
   if (!input) return;
-  let debounce;
+  let debounce, trackT;
   input.addEventListener('input', () => {
     clearTimeout(debounce);
     debounce = setTimeout(() => {
       searchQuery  = input.value.trim();
       visibleCount = PAGE_SIZE;
       renderProducts();
-      if (searchQuery && window.EBTrack) window.EBTrack.search(searchQuery, getFiltered().length);
     }, 150);
+    // Trackeo aparte y más lento: solo la búsqueda "asentada" (1s sin tipear),
+    // para no registrar cada tecla mientras el visitante escribe.
+    clearTimeout(trackT);
+    trackT = setTimeout(() => {
+      const q = input.value.trim();
+      if (q.length >= 2 && window.EBTrack) window.EBTrack.search(q, getFiltered().length);
+    }, 1000);
   });
 }
 
