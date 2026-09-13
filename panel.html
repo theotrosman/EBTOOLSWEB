@@ -7,7 +7,7 @@
   <title>Panel · EBTOOLS</title>
   <link rel="icon" href="assets/icon.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/panel.css?v=15">
+  <link rel="stylesheet" href="css/panel.css?v=16">
 </head>
 <body>
 
@@ -48,7 +48,6 @@
     <button class="tab" data-tab="catalogo">Catálogo</button>
     <button class="tab" data-tab="orden">Orden</button>
     <button class="tab" data-tab="estadisticas">📊 Estadísticas</button>
-    <button class="tab" data-tab="actividad">Actividad</button>
     <button class="tab" data-tab="banner">Banner</button>
   </nav>
 
@@ -315,25 +314,6 @@
       </div>
     </section>
 
-    <section id="tab-actividad" class="tab-panel">
-      <div class="panel-head">
-        <h2>Actividad de productos</h2>
-        <div class="panel-head-actions">
-          <div class="heat-range-pills">
-            <button class="heat-pill active" data-days="7">7 días</button>
-            <button class="heat-pill" data-days="30">30 días</button>
-            <button class="heat-pill" data-days="">Siempre</button>
-          </div>
-        </div>
-      </div>
-      <p class="check-hint" style="margin-bottom:14px">
-        Cada vez que un visitante abre un producto en el catálogo se registra una vista (sin datos personales).<br>
-        Usá <strong>"Pinear al catálogo"</strong> para que ese producto aparezca entre los primeros sin tocar "Ver más".
-      </p>
-      <div id="heatmap-loading" style="display:none" class="empty">Cargando actividad…</div>
-      <div id="heatmap-table" class="data-table heat-table"></div>
-    </section>
-
     <section id="tab-banner" class="tab-panel">
       <div class="panel-head">
         <h2>Banner del sitio</h2>
@@ -384,7 +364,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="js/config.js?v=15"></script>
-<script src="js/panel.js?v=15"></script>
+<script src="js/config.js?v=16"></script>
+<script src="js/panel.js?v=16"></script>
 </body>
 </html>

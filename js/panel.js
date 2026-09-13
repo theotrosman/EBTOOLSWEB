@@ -591,103 +591,6 @@ async function saveOrder() {
   renderOrder();
 }
 
-/* ---------- HEATMAP DE ACTIVIDAD ---------- */
-let _heatDays = 7; // ventana de tiempo seleccionada (null = todo)
-
-async function renderHeatmap() {
-  const wrap    = $('heatmap-table');
-  const loading = $('heatmap-loading');
-  if (!wrap) return;
-
-  wrap.innerHTML = '';
-  if (loading) loading.style.display = '';
-
-  // Obtener conteos desde Supabase (RPC agrega en DB, rápido)
-  const { data: counts, error } = await sb.rpc('get_product_clicks', {
-    days_back: _heatDays || null
-  });
-
-  if (loading) loading.style.display = 'none';
-
-  if (error) {
-    wrap.innerHTML = `<div class="empty">Error al cargar actividad: ${esc(error.message)}</div>`;
-    return;
-  }
-  if (!counts?.length) {
-    wrap.innerHTML = '<div class="empty">Sin registros en el período seleccionado. Las vistas se registran cuando los visitantes abren un producto.</div>';
-    return;
-  }
-
-  // Merge conteos con datos de productos
-  const countMap = Object.fromEntries(counts.map(r => [r.product_id, Number(r.click_count)]));
-  const maxCount = Math.max(...Object.values(countMap), 1);
-
-  // Rank list: productos con vistas primero, luego sin datos
-  const withViews = state.products
-    .filter(p => countMap[p.id])
-    .map(p => ({ ...p, _views: countMap[p.id] }))
-    .sort((a, b) => b._views - a._views);
-
-  if (!withViews.length) {
-    wrap.innerHTML = '<div class="empty">Ningún producto de este catálogo tiene vistas aún en el período seleccionado.</div>';
-    return;
-  }
-
-  wrap.innerHTML = withViews.map((p, i) => {
-    const ratio   = p._views / maxCount;
-    const barW    = Math.max(ratio * 100, 2).toFixed(1);
-    // Color continuo: de naranja muy claro a naranja sólido
-    const opacity = (0.15 + ratio * 0.85).toFixed(2);
-    const isPinned = !!p.catalog_pinned;
-    return `<div class="row heat-row">
-      <span class="heat-rank">${i + 1}</span>
-      <img src="${esc(p.img)}" alt="" onerror="this.style.visibility='hidden'">
-      <div class="row-main">
-        <div class="row-name">${esc(p.name)}</div>
-        <div class="heat-bar-wrap">
-          <div class="heat-bar" data-w="${barW}" style="background:rgba(244,123,32,${opacity})"></div>
-        </div>
-      </div>
-      <span class="heat-count">${p._views.toLocaleString('es-AR')} vista${p._views !== 1 ? 's' : ''}</span>
-      <button class="heat-pin-btn${isPinned ? ' pinned' : ''}"
-              onclick="quickPinFromHeatmap(${p.id}, this)"
-              title="${isPinned ? 'Ya pinneado al catálogo' : 'Pinear al catálogo'}">
-        ${isPinned ? 'Pinneado' : 'Pinear'}
-      </button>
-    </div>`;
-  }).join('');
-
-  // Animar barras desde 0 con stagger — da sensación de "datos llegando"
-  requestAnimationFrame(() => {
-    wrap.querySelectorAll('.heat-bar').forEach((bar, i) => {
-      bar.style.transitionDelay = `${i * 35}ms`;
-      bar.style.width = bar.dataset.w + '%';
-    });
-  });
-}
-
-async function quickPinFromHeatmap(id, btn) {
-  const p = state.products.find(x => x.id === id);
-  if (!p) return;
-
-  // Toggle: si ya está pinneado, lo quitamos; si no, lo pinneamos
-  const newPinned = !p.catalog_pinned;
-  btn.disabled = true;
-  btn.textContent = '…';
-
-  const { error } = await sb.from('products')
-    .update({ catalog_pinned: newPinned, catalog_order: newPinned ? (p.catalog_order || 0) : 0 })
-    .eq('id', id);
-
-  btn.disabled = false;
-  if (error) { toast('Error: ' + error.message, true); btn.textContent = 'Pinear'; return; }
-
-  p.catalog_pinned = newPinned;
-  btn.textContent  = newPinned ? 'Pinneado' : 'Pinear';
-  btn.classList.toggle('pinned', newPinned);
-  toast(newPinned ? `"${p.name}" pinneado al catálogo` : `"${p.name}" quitado del catálogo`);
-}
-
 /* ---------- RENDER: SUBCATEGORIES ---------- */
 // Rellena el <select> de filtro por categoría con las categorías actuales.
 function populateSubcatCatFilter() {
@@ -2112,7 +2015,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (t.dataset.tab === 'catalogo')   renderCatalogPicker();
     if (t.dataset.tab === 'orden')      renderOrder();
     if (t.dataset.tab === 'estadisticas') renderStats();
-    if (t.dataset.tab === 'actividad')  renderHeatmap();
     if (t.dataset.tab === 'banner')     renderBannerTab();
   }));
 
@@ -2144,14 +2046,6 @@ document.addEventListener('DOMContentLoaded', () => {
   $('order-search')?.addEventListener('input', e => { state.ordersearch = e.target.value; renderOrder(); });
   $('save-order-btn')?.addEventListener('click', saveOrder);
   initOrderDnD();
-  document.querySelectorAll('.heat-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      document.querySelectorAll('.heat-pill').forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      _heatDays = pill.dataset.days ? parseInt(pill.dataset.days) : null;
-      renderHeatmap();
-    });
-  });
   $('banner-text')?.addEventListener('input', updateBannerPreview);
   $('save-banner-btn')?.addEventListener('click', saveBanner);
   $('new-product-btn').addEventListener('click', newProduct);
