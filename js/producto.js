@@ -91,7 +91,9 @@ function renderProduct() {
 
 /* ─── SEO: OG/Twitter dinámicos + datos estructurados del producto ─── */
 function applyProductSEO(product) {
-  const url = `https://ebtools.com.ar/producto?id=${product.id}`;
+  // Canonical apunta a la página estática pre-renderizada (crawleable sin JS),
+  // así se consolidan las señales SEO en una sola URL por producto.
+  const url = `https://ebtools.com.ar/producto/${product.id}`;
   const desc = (product.short || product.desc || '').slice(0, 200);
   const img = product.img || 'https://ebtools.com.ar/assets/logo.png';
   const title = `${product.name} — EBTOOLS`;
