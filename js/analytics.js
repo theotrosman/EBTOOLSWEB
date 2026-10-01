@@ -112,6 +112,14 @@
 
   const DEV = detect();
 
+  // Detecta bots/crawlers/automatización para NO registrarlos como visitas.
+  function isBot() {
+    try { if (navigator.webdriver) return true; } catch (_) {}
+    const ua = (navigator.userAgent || '').toLowerCase();
+    if (!ua) return true; // sin user-agent = sospechoso
+    return /bot\b|bot\/|crawl|spider|slurp|googlebot|google-?other|bingbot|bingpreview|yandex|baiduspider|duckduckbot|applebot|facebookexternalhit|facebot|ia_archiver|twitterbot|linkedinbot|pinterest|redditbot|telegrambot|whatsapp|embedly|quora|vkshare|w3c_validator|semrush|ahrefs|mj12bot|dotbot|petalbot|dataforseo|serpstat|screaming frog|gptbot|oai-searchbot|chatgpt-user|claudebot|claude-web|anthropic|perplexity|ccbot|bytespider|amazonbot|meta-externalagent|headlesschrome|phantomjs|puppeteer|playwright|selenium|lighthouse|pagespeed|gtmetrix|pingdom|uptimerobot|statuscake|site24x7|monitis|newrelicpinger|curl|wget|python-requests|axios|go-http|java\/|okhttp/i.test(ua);
+  }
+
   // ---------- Cola + envío ----------
   let queue = [];
   let flushTimer = null;
@@ -179,8 +187,10 @@
     } catch (_) {}
   }
 
+  const IS_BOT = isBot();
+
   // ---------- API pública ----------
-  const track = (type, extra) => { try { enqueue(baseRow(type, extra)); } catch (_) {} };
+  const track = (type, extra) => { if (IS_BOT) return; try { enqueue(baseRow(type, extra)); } catch (_) {} };
 
   // ---------- Scroll depth ----------
   let maxScroll = 0;
@@ -325,6 +335,7 @@
   }
 
   function boot() {
+    if (IS_BOT) return; // no registramos bots/crawlers
     if (IS_NEW_SESSION) {
       const r = referrerInfo();
       track('session_start', {

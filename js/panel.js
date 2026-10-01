@@ -1389,6 +1389,39 @@ const DAY_MS = 86400000;
 let _statsDays = 7;              // ventana seleccionada (null = siempre)
 let _statsLoading = false;
 let _statsCur = [];              // eventos de la ventana actual (para borrar ruido)
+let _statsShowBots = false;      // mostrar u ocultar tráfico de bots/datacenters
+let _statsBotCount = 0;          // sesiones de bots detectadas en la ventana
+
+// ISP/operadores de nube y hosting => tráfico de bots/crawlers, no clientes.
+const BOT_ISP_RE = /amazon|aws|google llc|google cloud|googleusercontent|microsoft|azure|vercel|digitalocean|ovh|hetzner|linode|akamai|cloudflare|oracle|leaseweb|contabo|choopa|vultr|datacamp|m247|scaleway|fastly|g-?core|zenlayer|alibaba|tencent|census|shodan|datacenter|data center|hosting|colo(cation)?|server|cdn|telstra global|level3|cogent|hurricane electric/i;
+
+function isBotSession(s) {
+  const m = s.meta || {};
+  if (m.bot) return true;
+  if (m.isp && BOT_ISP_RE.test(m.isp)) return true;
+  return false;
+}
+
+// Aviso y toggle de bots debajo del subtítulo de Estadísticas.
+function updateBotNote() {
+  const sub = $('stats-subhead');
+  if (!sub) return;
+  let note = $('stats-bot-note');
+  if (!note) {
+    note = document.createElement('div');
+    note.id = 'stats-bot-note';
+    note.className = 'stats-bot-note';
+    sub.insertAdjacentElement('afterend', note);
+  }
+  if (!_statsBotCount && !_statsShowBots) { note.style.display = 'none'; return; }
+  note.style.display = '';
+  if (_statsShowBots) {
+    note.innerHTML = `🤖 Mostrando bots/datacenters. <button class="linklike" onclick="toggleStatsBots()">Ocultar bots</button>`;
+  } else {
+    note.innerHTML = `🤖 Se ocultaron <strong>${_statsBotCount}</strong> visita${_statsBotCount === 1 ? '' : 's'} de bots/datacenters (crawlers de buscadores, monitoreo, etc.). <button class="linklike" onclick="toggleStatsBots()">Ver de todos modos</button>`;
+  }
+}
+function toggleStatsBots() { _statsShowBots = !_statsShowBots; renderStats(); }
 const statsCharts = {};          // instancias de Chart.js a destruir en cada render
 const STC = ['#F47B20','#0f0f0f','#2E86DE','#27AE60','#8E44AD','#E74C3C','#16A085','#F1C40F','#7F8C8D','#2980B9','#D35400','#C0392B'];
 
@@ -1521,7 +1554,6 @@ async function renderStats() {
 }
 
 function computeAndRender(cur, prev, hasPrev, ctx) {
-  _statsCur = cur;
   // ---- Agrupar por sesión (para device/fuente/duración/recorrido) ----
   const buildSessions = (events) => {
     const map = new Map();
@@ -1538,8 +1570,21 @@ function computeAndRender(cur, prev, hasPrev, ctx) {
     }
     return [...map.values()];
   };
-  const sessions = buildSessions(cur);
-  const prevSessions = buildSessions(prev);
+  let sessions = buildSessions(cur);
+  let prevSessions = buildSessions(prev);
+
+  // ---- Filtrar bots / tráfico de datacenters ----
+  const botIds = new Set();
+  sessions.concat(prevSessions).forEach(s => { if (isBotSession(s)) botIds.add(s.id); });
+  _statsBotCount = sessions.filter(s => botIds.has(s.id)).length;
+  if (!_statsShowBots && botIds.size) {
+    cur = cur.filter(e => !botIds.has(e.session_id));
+    prev = prev.filter(e => !botIds.has(e.session_id));
+    sessions = sessions.filter(s => !botIds.has(s.id));
+    prevSessions = prevSessions.filter(s => !botIds.has(s.id));
+  }
+  _statsCur = cur;
+  updateBotNote();
 
   const count = (arr, t) => arr.filter(e => e.type === t).length;
   const uniq = (arr, f) => new Set(arr.map(f).filter(Boolean)).size;

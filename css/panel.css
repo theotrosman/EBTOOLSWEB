@@ -493,3 +493,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
 .row-del{flex-shrink:0;width:24px;height:24px;border:none;background:none;color:var(--g300);font-size:1rem;line-height:1;border-radius:6px;cursor:pointer;transition:var(--t);display:flex;align-items:center;justify-content:center}
 .row-del:hover{background:#fdecea;color:#c0392b}
 .stats-rank-warn .rank-label{color:#a04000}
+
+/* Aviso de bots filtrados */
+.stats-bot-note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:.82rem;font-weight:600;padding:9px 14px;border-radius:9px;margin:-6px 0 18px}
+.linklike{background:none;border:none;color:var(--orange);font-weight:800;cursor:pointer;font-size:.82rem;padding:0 0 0 4px;text-decoration:underline}
